@@ -4,1271 +4,219 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Tax Doc Analyzer</title>
+    <title>Tax Forensics 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.7.2/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0"
-  }
-}
-</script>
-</head>
-  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+          "react/": "https://aistudiocdn.com/react@^19.2.0/",
+          "react": "https://aistudiocdn.com/react@^19.2.0"
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body class="bg-slate-900 text-slate-100">
     <div id="root"></div>
-    <script type="module">
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import ReactDOM from 'react-dom/client';
-import { GoogleGenAI, Type, GenerateContentResponse, Chat } from "@google/genai";
+    <script type="text/babel" data-type="module">
+      import React, { useState, useMemo } from 'react';
+      import ReactDOM from 'react-dom/client';
 
-// --- From components/icons.tsx (cleaned) ---
+      // --- Icon Components ---
+      const DocumentSearchIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m5-6h2m-1-2v4m5.707 5.293a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414 0l-4.293-4.293a6.5 6.5 0 111.414-1.414l4.293 4.293z" />
+        </svg>
+      );
+      const DataAnalysisIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      );
+      const FraudDetectionIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+      const ReportingIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      );
+      const CaseManagementIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      );
+      const AuditTrailIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      );
+      const SettingsIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      );
+      const HelpIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+      const DataCollectionIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10m16-10v10M4 13h16m0-6h-4a2 2 0 00-2 2v0a2 2 0 002 2h4m0 6h-4a2 2 0 01-2-2v0a2 2 0 012-2h4M4 7a2 2 0 012-2h12a2 2 0 012 2M4 17a2 2 0 002 2h12a2 2 0 002-2" />
+        </svg>
+      );
+      const FileListIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      );
 
-const ScaleIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3-1m6 0l3 1m-3-1l-3 9a5.002 5.002 0 006.001 0M18 7l3-1m-3.001 10.001a5.002 5.002 0 006.001 0M3 17h18" })
-    )
-);
-
-const HomeIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" })
-    )
-);
-
-const KeyIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-      React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 7a2 2 0 012 2m4 0a6 6 0 01-7.629 5.655l-2.071 2.072a2.828 2.828 0 01-4 0l-1.379-1.379a2.828 2.828 0 010-4L8.345 9.38a6 6 0 015.655-2.38z" })
-    )
-);
-
-const UploadIcon = (props) => (
-  React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-    React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" })
-  )
-);
-
-const ChatIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" })
-    )
-);
-
-const SendIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" })
-    )
-);
-
-const CloseIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" })
-    )
-);
-
-const BrainIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 004.463-1.442.75.75 0 01.981.635A11.477 11.477 0 0112 21a11.5 11.5 0 01-11.5-11.5 11.477 11.477 0 012.21-6.84.75.75 0 01.981-.635zM12.5 9a.5.5 0 00-1 0v1.987a.5.5 0 00.128.354l1.106 1.106a.5.5 0 00.707-.707L13 11.207V9z" }),
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12.25 2.25a.75.75 0 00-1.5 0v.01a.75.75 0 001.5 0V2.25z" }),
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4.573 4.573a.75.75 0 00-1.061-1.061 1.5 1.5 0 01-1.872 2.933.75.75 0 00.279 1.455 1.5 1.5 0 012.653-2.327zM20.488 16.81a.75.75 0 00-1.06-1.06l-.001.002a1.5 1.5 0 01-2.4-1.928.75.75 0 00-.816-1.123 1.5 1.5 0 011.854 3.111z" })
-    )
-);
-
-const SearchIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" })
-    )
-);
-
-const FileIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-        React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" })
-    )
-);
-
-const TrashIcon = (props) => (
-    React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", ...props },
-      React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" })
-    )
-);
-
-// --- From services/dbService.ts ---
-let db;
-const DB_NAME = 'FileStorageDB';
-const FILES_STORE_NAME = 'files';
-const CHUNKS_STORE_NAME = 'chunks';
-const TEMPLATES_STORE_NAME = 'templates';
-const SOURCE_GROUPS_STORE_NAME = 'sourceGroups';
-const DB_VERSION = 4;
-
-const initDB = () => {
-  return new Promise((resolve, reject) => {
-    if (db) {
-        return resolve(true);
-    }
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => {
-      console.error('Error opening DB');
-      reject(false);
-    };
-
-    request.onsuccess = (event) => {
-      db = event.target.result;
-      resolve(true);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      const transaction = event.target.transaction;
-
-      if (!db.objectStoreNames.contains(FILES_STORE_NAME)) {
-        db.createObjectStore(FILES_STORE_NAME, { keyPath: 'name' });
-      }
-      if (!db.objectStoreNames.contains(CHUNKS_STORE_NAME)) {
-        const chunkStore = db.createObjectStore(CHUNKS_STORE_NAME, { keyPath: 'id' });
-        chunkStore.createIndex('fileName', 'fileName', { unique: false });
-      }
-      if (!db.objectStoreNames.contains(TEMPLATES_STORE_NAME)) {
-        db.createObjectStore(TEMPLATES_STORE_NAME, { keyPath: 'name' });
-      }
-      if (!db.objectStoreNames.contains(SOURCE_GROUPS_STORE_NAME)) {
-        db.createObjectStore(SOURCE_GROUPS_STORE_NAME, { keyPath: 'name' });
-      }
-
-      if (event.oldVersion < 4) {
-        const fileStore = transaction.objectStore(FILES_STORE_NAME);
-        if (!fileStore.indexNames.contains('groupName')) {
-          fileStore.createIndex('groupName', 'groupName', { unique: false });
-        }
-
-        const groupStore = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
-        const defaultGroupName = "기본 그룹";
-        groupStore.add({ name: defaultGroupName }).onerror = (e) => {
-            e.preventDefault(); 
-        };
-
-        fileStore.openCursor().onsuccess = (e) => {
-          const cursor = e.target.result;
-          if (cursor) {
-            const file = cursor.value;
-            if (!file.groupName) {
-              file.groupName = defaultGroupName;
-              cursor.update(file);
-            }
-            cursor.continue();
-          }
-        };
-      }
-    };
-  });
-};
-
-const addFile = (metadata, chunks, groupName) => {
-  return new Promise((resolve, reject) => {
-    if (!db) return reject('DB not initialized');
-    
-    const transaction = db.transaction([FILES_STORE_NAME, CHUNKS_STORE_NAME], 'readwrite');
-    const fileStore = transaction.objectStore(FILES_STORE_NAME);
-    const chunkStore = transaction.objectStore(CHUNKS_STORE_NAME);
-    
-    fileStore.put({ ...metadata, groupName });
-
-    chunks.forEach(chunk => {
-        chunkStore.put(chunk);
-    });
-
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-  });
-};
-
-const getFilesByGroupName = (groupName) => {
-    return new Promise((resolve, reject) => {
-        if (!db) return reject('DB not initialized');
-        const transaction = db.transaction([FILES_STORE_NAME], 'readonly');
-        const store = transaction.objectStore(FILES_STORE_NAME);
-        const index = store.index('groupName');
-        const request = index.getAll(groupName);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-};
-
-const getChunksByFileName = (fileName) => {
-    return new Promise((resolve, reject) => {
-        if (!db) return reject('DB not initialized');
-
-        const transaction = db.transaction([CHUNKS_STORE_NAME], 'readonly');
-        const store = transaction.objectStore(CHUNKS_STORE_NAME);
-        const index = store.index('fileName');
-        const request = index.getAll(fileName);
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-};
-
-const deleteFile = (fileName) => {
-    return new Promise((resolve, reject) => {
-      if (!db) return reject('DB not initialized');
-      
-      const transaction = db.transaction([FILES_STORE_NAME, CHUNKS_STORE_NAME], 'readwrite');
-      const fileStore = transaction.objectStore(FILES_STORE_NAME);
-      const chunkStore = transaction.objectStore(CHUNKS_STORE_NAME);
-      const chunkIndex = chunkStore.index('fileName');
-
-      fileStore.delete(fileName);
-
-      const cursorRequest = chunkIndex.openCursor(IDBKeyRange.only(fileName));
-      cursorRequest.onsuccess = (event) => {
-        const cursor = event.target.result;
-        if (cursor) {
-            cursor.delete();
-            cursor.continue();
-        }
+      // --- UI Components ---
+      const Header = () => {
+        return (
+          <header className="bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+            <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16 border-b border-slate-800">
+                <div className="flex items-center">
+                  <svg className="h-8 w-8 text-blue-500" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" />
+                    <path d="M9 12l-4.463 4.463a5 5 0 1 1 7.071 -7.071l4.463 -4.463" />
+                    <path d="M12.5 5.5l5 5" />
+                    <path d="M14.5 7.5l5 5" />
+                    <path d="M3 21l3.536-3.536" />
+                    <path d="M17.464 8.536l3.536 -3.536" />
+                  </svg>
+                  <span className="ml-3 text-xl font-bold text-white">Tax Forensics 시스템</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </button>
+                  <img className="h-9 w-9 rounded-full ring-2 ring-slate-700" src="https://picsum.photos/100/100" alt="User Avatar" />
+                </div>
+              </div>
+            </nav>
+          </header>
+        );
       };
 
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
-};
-
-const addSourceGroup = (group) => {
-    return new Promise((resolve, reject) => {
-      if (!db) return reject('DB not initialized');
-      const transaction = db.transaction([SOURCE_GROUPS_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
-      store.put(group);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
-};
-
-const getAllSourceGroups = () => {
-    return new Promise((resolve, reject) => {
-      if (!db) return reject('DB not initialized');
-      const transaction = db.transaction([SOURCE_GROUPS_STORE_NAME], 'readonly');
-      const store = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-};
-
-const deleteSourceGroup = (groupName) => {
-    return new Promise(async (resolve, reject) => {
-        if (!db) return reject('DB not initialized');
-        try {
-            const filesToDelete = await getFilesByGroupName(groupName);
-            for (const file of filesToDelete) {
-                await deleteFile(file.name);
-            }
-            const transaction = db.transaction([SOURCE_GROUPS_STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
-            store.delete(groupName);
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
-        } catch (error) {
-            reject(error);
-        }
-    });
-};
-
-const getAllTemplates = () => {
-    return new Promise((resolve, reject) => {
-      if (!db) return reject('DB not initialized');
-      
-      const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readonly');
-      const store = transaction.objectStore(TEMPLATES_STORE_NAME);
-      const request = store.getAll();
-  
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-};
-
-const addTemplate = (template) => {
-    return new Promise((resolve, reject) => {
-      if (!db) return reject('DB not initialized');
-      
-      const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(TEMPLATES_STORE_NAME);
-      store.put(template);
-  
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
-};
-
-const deleteTemplate = (templateName) => {
-    return new Promise((resolve, reject) => {
-      if (!db) return reject('DB not initialized');
-      
-      const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(TEMPLATES_STORE_NAME);
-      store.delete(templateName);
-  
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
-};
-
-// --- From services/geminiService.ts (cleaned) ---
-let chat = null;
-let chatApiKey = null;
-const GEN_AI_ERROR_MESSAGE = "Gemini API 키가 설정되지 않았습니다. 헤더의 'API 키' 버튼을 클릭하여 설정하세요.";
-
-const getApiKey = () => localStorage.getItem('gemini_api_key');
-
-const getAi = () => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        return null;
-    }
-    return new GoogleGenAI({ apiKey });
-};
-
-const getChatSession = () => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        return null;
-    }
-
-    if (chat && chatApiKey === apiKey) {
-        return chat;
-    }
-
-    const genAI = getAi();
-    if (!genAI) {
-        return null;
-    }
-
-    chatApiKey = apiKey;
-    chat = genAI.chats.create({
-        model: 'gemini-2.5-flash',
-        config: {
-            systemInstruction: "당신은 세무 전문가입니다. 사용자의 질의에 따라 세법 규정에 대한 질문에 답변하세요. 세금과 관련 없는 주제에 대해 질문을 받으면 정중하게 거절하세요."
-        },
-    });
-    return chat;
-};
-
-const sendMessageToChat = async (message) => {
-    const currentChat = getChatSession();
-    if (!currentChat) {
-        throw new Error(GEN_AI_ERROR_MESSAGE);
-    }
-
-    const searchKeywords = ['최신', '트렌드', '뉴스', '현재', '누가 이겼어', '최근 세법 개정'];
-    const shouldUseSearch = searchKeywords.some(keyword => message.toLowerCase().includes(keyword));
-    const genAI = getAi();
-
-    if (shouldUseSearch) {
-        if (!genAI) throw new Error(GEN_AI_ERROR_MESSAGE);
-        const response = await genAI.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: message,
-            config: {
-              tools: [{googleSearch: {}}],
-              systemInstruction: "당신은 세무 전문가입니다. 사용자의 질의에 따라 세법 규정에 대한 질문에 답변하세요. 세금과 관련 없는 주제에 대해 질문을 받으면 정중하게 거절하세요."
-            },
-        });
-        const text = response.text;
-        const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-        const sources = groundingChunks
-            .map((chunk) => chunk.web)
-            .filter((web) => web !== undefined && web.uri !== undefined && web.title !== undefined);
-
-        return { role: 'model', parts: [{ text }], sources };
-
-    } else {
-        const response = await currentChat.sendMessage({ message });
-        return { role: 'model', parts: [{ text: response.text }] };
-    }
-};
-
-const askComplexQuestion = async (prompt) => {
-    const genAI = getAi();
-     if (!genAI) {
-        throw new Error(GEN_AI_ERROR_MESSAGE);
-    }
-    try {
-        const response = await genAI.models.generateContent({
-            model: 'gemini-2.5-pro',
-            contents: prompt,
-            config: {
-                systemInstruction: "당신은 세무 전문가입니다. 사용자의 질의에 따라 세법 규정에 대한 질문에 답변하세요. 세금과 관련 없는 주제에 대해 질문을 받으면 정중하게 거절하세요. 복잡한 세무 시나리오를 분석하고 상세한 답변을 제공하세요.",
-                thinkingConfig: { thinkingBudget: 32768 }
-            }
-        });
-        return response.text;
-    } catch (error) {
-        console.error("Error with complex question:", error);
-        throw new Error("복잡한 요청을 처리하지 못했습니다.");
-    }
-};
-
-const searchInFiles = async (query, instruction, selectedFileNames) => {
-    const genAI = getAi();
-    if (!genAI) {
-        throw new Error(GEN_AI_ERROR_MESSAGE);
-    }
-
-    if (selectedFileNames.length === 0) {
-        throw new Error("검색할 소스가 선택되지 않았습니다.");
-    }
-
-    try {
-        let context = '';
-        const MAX_CONTEXT_LENGTH = 100000;
-        const citedFiles = new Set();
-
-        for (const fileName of selectedFileNames) {
-            const chunks = await getChunksByFileName(fileName);
-            for (const chunk of chunks) {
-                if ((context.length + chunk.content.length) > MAX_CONTEXT_LENGTH) {
-                    break;
-                }
-                context += `\n\n--- 파일: ${chunk.fileName} ---\n${chunk.content}`;
-                citedFiles.add(fileName);
-            }
-            if (context.length > MAX_CONTEXT_LENGTH) {
-                break;
-            }
-        }
-        
-        if (!context.trim()) {
-             return "관련 정보를 찾을 수 없습니다. 선택한 파일에서 내용을 추출할 수 없습니다.";
-        }
-        
-        const baseInstruction = instruction.trim() !== '' 
-            ? instruction 
-            : `당신은 Tax Doc를 전문으로 다루는 지능형 검색 어시턴트입니다. 당신의 임무는 아래에 제공된 파일들의 문맥만을 기반으로 사용자의 질문에 답변하는 것입니다.
-분석을 위해서 외부 지식을 사용하셔도 됩니다.
-문맥에서 답을 찾을 수 없는 경우, 명확하게 그렇게 밝히십시오.
-정보를 찾은 파일 이름을 인용하십시오.
-답변은 간결하게 Markdown으로 구성하고, 블렛과 번호 목록을 이용하세요.`;
-
-
-        const answerPrompt = `
-            사용자 질문: "${query}"
-    
-            --- 파일 내용 시작 ---
-            ${context}
-            --- 파일 내용 끝 ---
-    
-            위 파일들을 바탕으로 질문에 답변하세요.
-        `;
-
-        const answerResponse = await genAI.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: answerPrompt,
-            config: {
-                systemInstruction: baseInstruction
-            }
-        });
-        return answerResponse.text;
-
-    } catch (error) {
-        console.error("Error searching in files:", error);
-        throw new Error("검색을 수행하지 못했습니다. 내용이 너무 크거나 API 오류가 발생했을 수 있습니다.");
-    }
-}
-
-
-// --- From components/Header.tsx ---
-const Header = ({ onStartOver, onApiKeyClick }) => {
-    return (
-        React.createElement('header', { className: "bg-white shadow-md sticky top-0 z-10" },
-            React.createElement('div', { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" },
-                React.createElement('div', { className: "flex justify-between items-center py-4" },
-                    React.createElement('div', { className: "flex items-center cursor-pointer", onClick: onStartOver },
-                        React.createElement(ScaleIcon, { className: "h-8 w-8 text-green-600" }),
-                        React.createElement('h1', { className: "ml-2 text-2xl font-bold text-gray-800 hidden sm:block" },
-                            "AI Tax Doc Analyzer"
-                        )
-                    ),
-                    React.createElement('nav', { className: "flex items-center space-x-2 md:space-x-4" },
-                        React.createElement('button',
-                            {
-                                onClick: onStartOver,
-                                className: "flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md transition",
-                                title: "처음부터 시작"
-                            },
-                            React.createElement(HomeIcon, { className: "h-6 w-6" }),
-                            React.createElement('span', { className: "ml-2 hidden md:inline" }, "처음부터 시작")
-                        ),
-                        React.createElement('button',
-                            {
-                                onClick: onApiKeyClick,
-                                className: "flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md transition",
-                                title: "API 키 설정"
-                            },
-                            React.createElement(KeyIcon, { className: "h-6 w-6" }),
-                            React.createElement('span', { className: "ml-2 hidden md:inline" }, "API 키")
-                        )
-                    )
-                )
-            )
-        )
-    );
-};
-
-// --- From components/Chatbot.tsx ---
-const Chatbot = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isProMode, setIsProMode] = useState(false);
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-  
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const userMessage = { role: 'user', parts: [{ text: input }] };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-
-    setIsLoading(true);
-
-    try {
-        let responseText;
-        let sources;
-
-        if (isProMode) {
-            responseText = await askComplexQuestion(input);
-        } else {
-            const modelResponse = await sendMessageToChat(input);
-            responseText = modelResponse.parts[0].text;
-            sources = modelResponse.sources;
-        }
-
-        const modelMessage = { role: 'model', parts: [{ text: responseText }], sources };
-        setMessages(prev => [...prev, modelMessage]);
-
-    } catch (error) {
-        console.error("Chatbot error:", error);
-        const errorMessage = { role: 'model', parts: [{ text: error.message || "죄송합니다, 지금 연결하는 데 문제가 있습니다." }] };
-        setMessages(prev => [...prev, errorMessage]);
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-  return (
-    React.createElement(React.Fragment, null,
-      React.createElement('button',
-        {
-          onClick: () => setIsOpen(!isOpen),
-          className: "fixed bottom-6 right-6 bg-green-600 text-white p-4 rounded-full shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-transform transform hover:scale-110"
-        },
-        isOpen ? React.createElement(CloseIcon, { className: "w-8 h-8" }) : React.createElement(ChatIcon, { className: "w-8 h-8" })
-      ),
-
-      isOpen && (
-        React.createElement('div', { className: "fixed bottom-24 right-6 w-[90vw] max-w-md h-[70vh] max-h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200" },
-          React.createElement('header', { className: "p-4 bg-gray-50 border-b flex justify-between items-center" },
-            React.createElement('div', null,
-              React.createElement('h3', { className: "font-bold text-lg text-gray-800" }, "AI Tax 비서"),
-              React.createElement('p', { className: "text-sm text-gray-500" }, "일반적인 Tax 관련 질문을 하세요!")
-            ),
-            React.createElement('button',
-              {
-                onClick: () => setIsProMode(!isProMode),
-                title: isProMode ? "프로 모드 비활성화 (복잡한 질문용)" : "프로 모드 활성화 (복잡한 질문용)",
-                className: `p-2 rounded-full transition-colors ${isProMode ? 'bg-purple-200 text-purple-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`
-              },
-              React.createElement(BrainIcon, { className: "w-5 h-5"})
-            )
-          ),
-          
-          React.createElement('div', { className: "flex-1 p-4 overflow-y-auto bg-gray-100" },
-            messages.map((msg, index) => (
-              React.createElement('div', { key: index, className: `flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4` },
-                React.createElement('div', { className: `max-w-[80%] p-3 rounded-2xl ${msg.role === 'user' ? 'bg-green-600 text-white rounded-br-none' : 'bg-white text-gray-800 rounded-bl-none border'}` },
-                  React.createElement('p', { className: "whitespace-pre-wrap" }, msg.parts[0].text),
-                  msg.sources && msg.sources.length > 0 && (
-                      React.createElement('div', { className: "mt-3 pt-2 border-t border-gray-200" },
-                          React.createElement('h4', { className: "text-xs font-semibold mb-1" }, "출처:"),
-                          React.createElement('ul', { className: "space-y-1" },
-                              msg.sources.map((source, i) => (
-                                  React.createElement('li', { key: i },
-                                      React.createElement('a', { href: source.uri, target: "_blank", rel: "noopener noreferrer", className: "text-xs text-blue-600 hover:underline truncate block" },
-                                          source.title
-                                      )
-                                  )
-                              ))
-                          )
-                      )
-                  )
-                )
-              )
-            )),
-             isLoading && (
-              React.createElement('div', { className: "flex justify-start mb-4" },
-                React.createElement('div', { className: "max-w-[80%] p-3 rounded-2xl bg-white text-gray-800 rounded-bl-none border" },
-                  React.createElement('div', { className: "flex items-center space-x-2" },
-                      React.createElement('div', { className: "w-2 h-2 bg-gray-400 rounded-full animate-pulse" }),
-                      React.createElement('div', { className: "w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:0.2s]" }),
-                      React.createElement('div', { className: "w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:0.4s]" })
-                  )
-                )
-              )
-            ),
-            React.createElement('div', { ref: messagesEndRef })
-          ),
-
-          React.createElement('form', { onSubmit: handleSendMessage, className: "p-4 border-t bg-white flex items-center" },
-            React.createElement('input',
-              {
-                type: "text",
-                value: input,
-                onChange: (e) => setInput(e.target.value),
-                placeholder: isProMode ? "복잡한 질문을 입력하세요..." : "메시지를 입력하세요...",
-                className: "flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-green-500",
-                disabled: isLoading
-              }
-            ),
-            React.createElement('button',
-              {
-                type: "submit",
-                className: "ml-3 bg-green-600 text-white p-3 rounded-full hover:bg-green-700 focus:outline-none disabled:bg-gray-400",
-                disabled: isLoading || !input.trim()
-              },
-              React.createElement(SendIcon, { className: "w-6 h-6" })
-            )
-          )
-        )
-      )
-    )
-  );
-};
-
-
-// --- From components/FileSearch.tsx ---
-const SourceViewerModal = ({ file, onClose }) => {
-    if (!file) return null;
-
-    const isTextBased = (file) => {
-        return file.mimeType.startsWith('text/') ||
-            ['.md', '.json', 'application/json', '.eml', '.msg'].some(type => file.mimeType.includes(type) || file.name.toLowerCase().endsWith(type));
-    };
-
-    return (
-        React.createElement('div', { className: "fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4", onClick: onClose },
-            React.createElement('div', { className: "bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col", onClick: (e) => e.stopPropagation() },
-                React.createElement('header', { className: "p-4 border-b flex justify-between items-center flex-shrink-0" },
-                    React.createElement('h4', { className: "font-bold text-lg text-gray-800 truncate", title: file.name }, file.name),
-                    React.createElement('button', { onClick: onClose, className: "p-2 text-gray-500 hover:bg-gray-100 rounded-full" },
-                        React.createElement(CloseIcon, { className: "w-6 h-6" })
-                    )
-                ),
-                React.createElement('main', { className: "p-6 overflow-y-auto" },
-                    isTextBased(file) ? (
-                        React.createElement('pre', { className: "whitespace-pre-wrap text-sm font-mono bg-gray-50 p-4 rounded-md" }, file.content)
-                    ) : (
-                        React.createElement('div', { className: "text-center text-gray-600 p-8" },
-                            React.createElement(FileIcon, { className: "w-16 h-16 mx-auto text-gray-400" }),
-                            React.createElement('p', { className: "mt-4" }, "이 파일 형식은 미리보기를 지원하지 않습니다."),
-                             React.createElement('p', { className: "text-sm text-gray-500" }, "대신 파일에서 추출된 텍스트 내용이 저장됩니다.")
-                        )
-                    )
-                )
-            )
-        )
-    );
-};
-
-const chunkText = (text, chunkSize = 2000, overlap = 200) => {
-    const chunks = [];
-    if (!text) return chunks;
-    let i = 0;
-    while (i < text.length) {
-        const end = i + chunkSize;
-        chunks.push(text.slice(i, end));
-        i = end - overlap;
-        if (i < 0) i = end;
-    }
-    return chunks;
-}
-
-const DEFAULT_INSTRUCTION = `당신은 Tax Doc를 전문으로 다루는 지능형 검색 어시턴트입니다. 당신의 임무는 아래에 제공된 파일들의 문맥만을 기반으로 사용자의 질문에 답변하는 것입니다.
-분석을 위해서 외부 지식을 사용하셔도 됩니다.
-문맥에서 답을 찾을 수 없는 경우, 명확하게 그렇게 밝히십시오.
-정보를 찾은 파일 이름을 인용하십시오.
-답변은 간결하게 Markdown으로 구성하고, 블렛과 번호 목록을 이용하세요.`;
-
-const FileSearch = () => {
-    const [files, setFiles] = useState([]);
-    const [selectedFiles, setSelectedFiles] = useState(new Set());
-    const [query, setQuery] = useState('');
-    const [searchResult, setSearchResult] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [statusText, setStatusText] = useState('');
-    const [error, setError] = useState(null);
-    const [viewingFile, setViewingFile] = useState(null);
-    const [templates, setTemplates] = useState([]);
-    const [selectedTemplateName, setSelectedTemplateName] = useState('');
-    const [currentInstruction, setCurrentInstruction] = useState(DEFAULT_INSTRUCTION);
-    const [isPdfLibReady, setIsPdfLibReady] = useState(false);
-    const fileInputRef = useRef(null);
-    const [sourceGroups, setSourceGroups] = useState([]);
-    const [selectedGroupName, setSelectedGroupName] = useState('');
-
-    useEffect(() => {
-        const loadInitialData = async () => {
-            await initDB();
-            let storedGroups = await getAllSourceGroups();
-            if (storedGroups.length === 0) {
-                const defaultGroupName = "기본 그룹";
-                await addSourceGroup({ name: defaultGroupName });
-                storedGroups = [{ name: defaultGroupName }];
-            }
-            setSourceGroups(storedGroups);
-            setSelectedGroupName(storedGroups[0].name);
-
-            const storedTemplates = await getAllTemplates();
-            setTemplates(storedTemplates);
-        };
-
-        loadInitialData();
-    
-        let pdfInitInterval;
-        const initPdfLib = () => {
-            if (window.pdfjsLib) {
-                if (pdfInitInterval) clearInterval(pdfInitInterval);
-                try {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
-                    setIsPdfLibReady(true);
-                } catch (e) {
-                    console.error("PDF worker setup failed:", e);
-                    setError("PDF 라이브러리 초기화 실패. 페이지를 새로고침 하세요.");
-                }
-            }
-        };
-
-        initPdfLib(); 
-        pdfInitInterval = setInterval(initPdfLib, 100);
-
-        return () => {
-            if (pdfInitInterval) clearInterval(pdfInitInterval);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!selectedGroupName) return;
-        const loadFilesForGroup = async () => {
-            const storedFiles = await getFilesByGroupName(selectedGroupName);
-            setFiles(storedFiles);
-            setSelectedFiles(new Set(storedFiles.map(f => f.name)));
-        };
-        loadFilesForGroup();
-    }, [selectedGroupName]);
-
-    const handleFileChange = async (event) => {
-        const selectedFilesList = event.target.files;
-        if (!selectedFilesList) return;
-
-        if (!selectedGroupName) {
-            setError("파일을 추가하려면 먼저 그룹을 선택하거나 생성해야 합니다.");
-            return;
-        }
-    
-        setIsLoading(true);
-        setStatusText('파일 처리 중...');
-        setError(null);
-    
-        for (const file of Array.from(selectedFilesList)) {
-            setStatusText(`'${file.name}' 처리 중...`);
-            let content = null;
-    
-            const fileName = file.name.toLowerCase();
-    
-            try {
-                if (fileName.endsWith('.pdf')) {
-                    if (!window.pdfjsLib) {
-                        setError("PDF 라이브러리를 로드하지 못했습니다. 페이지를 새로고침하고 다시 시도하세요.");
-                        continue;
-                    }
-                    
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                    let fullText = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        const pageText = textContent.items.map((item) => item.str).join(' ');
-                        fullText += pageText + '\n';
-                    }
-                    content = fullText;
-                } else if (fileName.endsWith('.docx')) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const result = await mammoth.extractRawText({ arrayBuffer });
-                    content = result.value;
-                } else if (file.type.startsWith('text/') || ['.md', '.json', '.eml', '.msg'].some(ext => fileName.endsWith(ext))) {
-                    content = await file.text();
-                } else {
-                    setError(`'${file.name}'은(는) 지원되지 않는 파일 형식입니다. 텍스트, PDF, DOCX 파일만 지원됩니다.`);
-                    continue;
-                }
-    
-                if (content) {
-                    const chunks = chunkText(content);
-                    const storedChunks = chunks.map((chunkContent, index) => ({
-                        id: `${file.name}#${index}`,
-                        fileName: file.name,
-                        content: chunkContent,
-                    }));
-                    const metadata = {
-                        name: file.name,
-                        mimeType: file.type || 'application/octet-stream',
-                    };
-                    await addFile(metadata, storedChunks, selectedGroupName);
-                }
-            } catch (err) {
-                console.error(`Error processing file ${file.name}:`, err);
-                setError(`'${file.name}' 파일을 처리하는 데 실패했습니다. 파일이 손상되었거나 지원되지 않는 형식일 수 있습니다.`);
-            }
-        }
-        
-        const updatedFiles = await getFilesByGroupName(selectedGroupName);
-        setFiles(updatedFiles);
-        setSelectedFiles(new Set(updatedFiles.map(f => f.name)));
-        setIsLoading(false);
-        setStatusText('');
-        if (event.target) event.target.value = '';
-    };
-
-    const handleDeleteFile = async (fileName) => {
-        if (window.confirm(`'${fileName}' 소스를 정말로 삭제하시겠습니까?`)) {
-            await deleteFile(fileName);
-            const updatedFiles = await getFilesByGroupName(selectedGroupName);
-            setFiles(updatedFiles);
-            setSelectedFiles(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(fileName);
-                return newSet;
-            });
-        }
-    };
-
-    const handleViewFile = async (fileMeta) => {
-        const chunks = await getChunksByFileName(fileMeta.name);
-        const fullContent = chunks.map(c => c.content).join('');
-        setViewingFile({
-            name: fileMeta.name,
-            content: fullContent,
-            mimeType: fileMeta.mimeType
-        });
-    };
-
-    const handleSearch = useCallback(async () => {
-        if (!query.trim()) {
-            setError("검색어를 입력하세요.");
-            return;
-        }
-        if (selectedFiles.size === 0) {
-            setError("분석할 소스를 하나 이상 선택하세요.");
-            return;
-        }
-        setIsLoading(true);
-        setStatusText('문서를 분석 중입니다...');
-        setError(null);
-        setSearchResult('');
-        try {
-            const result = await searchInFiles(query, currentInstruction, Array.from(selectedFiles));
-            setSearchResult(result);
-        } catch (e) {
-            setError(e.message || "검색 중 오류가 발생했습니다.");
-        } finally {
-            setIsLoading(false);
-            setStatusText('');
-        }
-    }, [query, selectedFiles, currentInstruction]);
-    
-    const handleKeyDown = (event) => {
-        if (event.key === 'Enter') {
-            handleSearch();
-        }
-    };
-
-    const handleTemplateSelect = (e) => {
-        const name = e.target.value;
-        setSelectedTemplateName(name);
-        if (name) {
-            const selected = templates.find(t => t.name === name);
-            if (selected) {
-                setCurrentInstruction(selected.content);
-            }
-        } else {
-            setCurrentInstruction(DEFAULT_INSTRUCTION);
-        }
-    };
-    
-    const handleFileSelectionChange = (fileName) => {
-        setSelectedFiles(prevSelected => {
-            const newSelected = new Set(prevSelected);
-            if (newSelected.has(fileName)) {
-                newSelected.delete(fileName);
-            } else {
-                newSelected.add(fileName);
-            }
-            return newSelected;
-        });
-    };
-
-    const handleSelectAll = () => {
-        setSelectedFiles(new Set(files.map(f => f.name)));
-    };
-
-    const handleDeselectAll = () => {
-        setSelectedFiles(new Set());
-    };
-
-    const handleSaveTemplate = async () => {
-        const name = window.prompt("템플릿 이름을 입력하세요:");
-        if (name && name.trim()) {
-            if (templates.some(t => t.name === name)) {
-                if (!window.confirm("같은 이름의 템플릿이 이미 있습니다. 덮어쓰시겠습니까?")) {
-                    return;
-                }
-            }
-            await addTemplate({ name, content: currentInstruction });
-            const storedTemplates = await getAllTemplates();
-            setTemplates(storedTemplates);
-            setSelectedTemplateName(name);
-            alert(`'${name}' 템플릿이 저장되었습니다.`);
-        } else {
-            alert("유효한 템플릿 이름을 입력해야 합니다.");
-        }
-    };
-
-    const handleDeleteTemplate = async () => {
-        if (!selectedTemplateName) {
-            alert("삭제할 템플릿을 선택하세요.");
-            return;
-        }
-        if (window.confirm(`'${selectedTemplateName}' 템플릿을 정말로 삭제하시겠습니까?`)) {
-            await deleteTemplate(selectedTemplateName);
-            const storedTemplates = await getAllTemplates();
-            setTemplates(storedTemplates);
-            setSelectedTemplateName('');
-            setCurrentInstruction(DEFAULT_INSTRUCTION);
-            alert(`'${selectedTemplateName}' 템플릿이 삭제되었습니다.`);
-        }
-    };
-
-    const handleCreateGroup = async () => {
-        const name = window.prompt("새 소스 그룹 이름을 입력하세요:");
-        if (name && name.trim()) {
-            if (sourceGroups.some(g => g.name === name)) {
-                alert("같은 이름의 그룹이 이미 있습니다.");
-                return;
-            }
-            await addSourceGroup({ name });
-            const updatedGroups = await getAllSourceGroups();
-            setSourceGroups(updatedGroups);
-            setSelectedGroupName(name);
-        } else if (name !== null) {
-            alert("유효한 그룹 이름을 입력해야 합니다.");
-        }
-    };
-    
-    const handleDeleteGroup = async () => {
-        if (!selectedGroupName) {
-            alert("삭제할 그룹을 선택하세요.");
-            return;
-        }
-        if (window.confirm(`'${selectedGroupName}' 그룹을 정말로 삭제하시겠습니까? 그룹 내의 모든 소스 파일이 영구적으로 삭제됩니다.`)) {
-            await deleteSourceGroup(selectedGroupName);
-            const updatedGroups = await getAllSourceGroups();
-            setSourceGroups(updatedGroups);
-            setSelectedGroupName(updatedGroups.length > 0 ? updatedGroups[0].name : '');
-        }
-    };
-
-    const handleGroupSelect = (e) => {
-        setSelectedGroupName(e.target.value);
-    };
-
-    const renderMarkdown = (markdown) => {
-        if (!markdown) return '';
-
-        // Process inline styles first
-        let processedText = markdown
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/_(.*?)_/g, '<em>$1</em>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-        const lines = processedText.split('\n');
-        const htmlLines = [];
-        let inList = null; // 'ul' or 'ol'
-
-        for (const line of lines) {
-            const ulMatch = line.match(/^\s*[\-\*]\s+(.*)/);
-            const olMatch = line.match(/^\s*\d+\.\s+(.*)/);
-            
-            if (ulMatch) {
-                if (inList !== 'ul') {
-                    if (inList) htmlLines.push(`</${inList}>`);
-                    htmlLines.push('<ul>');
-                    inList = 'ul';
-                }
-                htmlLines.push(`<li>${ulMatch[1]}</li>`);
-            } else if (olMatch) {
-                if (inList !== 'ol') {
-                    if (inList) htmlLines.push(`</${inList}>`);
-                    htmlLines.push('<ol>');
-                    inList = 'ol';
-                }
-                htmlLines.push(`<li>${olMatch[1]}</li>`);
-            } else {
-                if (inList) {
-                    htmlLines.push(`</${inList}>`);
-                    inList = null;
-                }
-                htmlLines.push(line);
-            }
-        }
-        if (inList) {
-            htmlLines.push(`</${inList}>`);
-        }
-
-        const html = htmlLines.join('\n');
-        return html.split(/\n\s*\n/).map(p => {
-            if (!p.trim()) return '';
-            if (p.startsWith('<ul>') || p.startsWith('<ol>')) {
-                return p;
-            }
-            return `<p>${p.replace(/\n/g, '<br />')}</p>`;
-        }).join('');
-    };
-
-    return React.createElement(React.Fragment, null,
-        React.createElement('div', { className: "bg-white rounded-xl shadow-lg p-8 max-w-7xl mx-auto w-full h-full flex flex-col" },
-            React.createElement('div', { className: "text-center mb-10" },
-                React.createElement('h2', { className: "text-3xl font-extrabold text-gray-900" }, "AI Tax Doc Analyzer"),
-                React.createElement('p', { className: "mt-2 text-lg text-gray-600" }, "Tax Doc를 본인의 저장소(로컬, 클라우드)에 저장하고 지능형 검색을 통해 질문하세요.")
-            ),
-            React.createElement('div', { className: "grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow min-h-0" },
-                React.createElement('div', { className: "lg:col-span-1 space-y-4 flex flex-col" },
-                    React.createElement('h3', { className: "text-xl font-bold text-gray-800" }, "소스 그룹"),
-                    React.createElement('div', { className: "flex items-center gap-2" },
-                        React.createElement('select', { id: "source-group", value: selectedGroupName, onChange: handleGroupSelect, className: "block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" },
-                            sourceGroups.map(group => React.createElement('option', { key: group.name, value: group.name }, group.name))
-                        ),
-                        React.createElement('button', { onClick: handleDeleteGroup, disabled: !selectedGroupName, className: "p-2 text-gray-500 hover:bg-red-100 hover:text-red-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed", title: "선택한 그룹 삭제" },
-                            React.createElement(TrashIcon, { className: "w-5 h-5" })
-                        )
-                    ),
-                    React.createElement('div', { className: "flex items-center gap-2" },
-                        React.createElement('button', { onClick: handleCreateGroup, className: "w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-md font-semibold hover:bg-gray-300 transition-colors" }, "새 그룹 만들기")
-                    ),
-                    React.createElement('h3', { className: "text-lg font-bold text-gray-800 mt-4 border-t pt-4" }, "그룹 내 소스"),
-                    React.createElement('input', { type: "file", ref: fileInputRef, onChange: handleFileChange, className: "hidden", multiple: true, accept: "text/*,.md,.json,.eml,.msg,.pdf,.docx" }),
-                    React.createElement('button', { onClick: () => fileInputRef.current?.click(), disabled: isLoading || !isPdfLibReady || !selectedGroupName, className: "w-full flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed", title: !selectedGroupName ? "파일을 추가할 그룹을 선택하세요" : "" },
-                        React.createElement(UploadIcon, { className: "w-6 h-6 mr-2" }), isPdfLibReady ? "현재 그룹에 소스 추가" : "PDF 라이브러리 초기화 중..."
-                    ),
-                    files.length > 0 ? React.createElement(React.Fragment, null,
-                        React.createElement('div', { className: "flex justify-between items-center text-sm px-1" },
-                            React.createElement('button', { onClick: handleSelectAll, className: "font-semibold text-green-600 hover:text-green-800" }, "모두 선택"),
-                            React.createElement('button', { onClick: handleDeselectAll, className: "font-semibold text-gray-500 hover:text-gray-700" }, "모두 선택 해제")
-                        ),
-                        React.createElement('div', { className: "bg-gray-50 border rounded-md flex-grow overflow-y-auto" },
-                            React.createElement('ul', { className: "p-2 space-y-1" },
-                                files.map((file) => (
-                                    React.createElement('li', { key: file.name, className: "group flex items-center justify-between rounded-md hover:bg-gray-200 transition-colors p-2" },
-                                        React.createElement('div', { className: "flex items-center truncate" },
-                                            React.createElement('input', { type: "checkbox", id: `file-${file.name}`, checked: selectedFiles.has(file.name), onChange: () => handleFileSelectionChange(file.name), className: "h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3 flex-shrink-0" }),
-                                            React.createElement(FileIcon, { className: "w-5 h-5 mr-3 text-gray-500 flex-shrink-0" }),
-                                            React.createElement('label', { htmlFor: `file-${file.name}`, className: "truncate text-gray-800 cursor-pointer", title: file.name }, file.name)
-                                        ),
-                                        React.createElement('div', { className: "flex items-center flex-shrink-0" },
-                                            React.createElement('button', { onClick: () => handleViewFile(file), className: "ml-2 p-1 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity", title: "파일 보기" },
-                                                React.createElement(SearchIcon, { className: "w-5 h-5" })
-                                            ),
-                                            React.createElement('button', { onClick: () => handleDeleteFile(file.name), className: "ml-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity", title: "파일 삭제" },
-                                                React.createElement(TrashIcon, { className: "w-5 h-5" })
-                                            )
-                                        )
-                                    )
-                                ))
-                            )
-                        )
-                    ) : React.createElement('div', { className: "text-center text-gray-500 p-6 border-2 border-dashed rounded-md" },
-                        selectedGroupName ? React.createElement('p', null, "현재 그룹에 소스를 추가하세요.") : React.createElement('p', null, "시작하려면 소스 그룹을 만드세요.")
-                    )
-                ),
-                React.createElement('div', { className: "lg:col-span-2 space-y-6 flex flex-col" },
-                    files.length > 0 && React.createElement(React.Fragment, null,
-                        React.createElement('div', { className: "space-y-3" },
-                            React.createElement('label', { htmlFor: "instruction-template", className: "block text-lg font-bold text-gray-800" }, "지침 템플릿"),
-                            React.createElement('div', { className: "flex items-center gap-2" },
-                                React.createElement('select', { id: "instruction-template", value: selectedTemplateName, onChange: handleTemplateSelect, className: "block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" },
-                                    React.createElement('option', { value: "" }, "기본 지침"),
-                                    templates.map(template => React.createElement('option', { key: template.name, value: template.name }, template.name))
-                                ),
-                                React.createElement('button', { onClick: handleDeleteTemplate, disabled: !selectedTemplateName, className: "p-2 text-gray-500 hover:bg-red-100 hover:text-red-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed", title: "선택한 템플릿 삭제" },
-                                    React.createElement(TrashIcon, { className: "w-5 h-5" })
-                                )
-                            ),
-                            React.createElement('textarea', { value: currentInstruction, onChange: (e) => setCurrentInstruction(e.target.value), placeholder: "검색에 사용할 지침을 입력하세요...", rows: 4, className: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" }),
-                            React.createElement('button', { onClick: handleSaveTemplate, className: "px-4 py-2 bg-gray-200 text-gray-800 rounded-md font-semibold hover:bg-gray-300 transition-colors" }, "템플릿으로 저장")
-                        ),
-                        React.createElement('div', { className: "relative" },
-                            React.createElement('input', { type: "text", value: query, onChange: (e) => setQuery(e.target.value), onKeyDown: handleKeyDown, placeholder: "선택된 문서에 대해 질문하세요...", className: "w-full px-5 py-4 pr-16 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500", disabled: isLoading }),
-                            React.createElement('button', { onClick: handleSearch, className: "absolute right-2 top-1/2 -translate-y-1/2 bg-green-600 text-white p-3 rounded-full hover:bg-green-700 focus:outline-none disabled:bg-gray-400", disabled: isLoading || !query.trim(), "aria-label": "검색" },
-                                React.createElement(SearchIcon, { className: "w-6 h-6" })
-                            )
-                        )
-                    ),
-                    error && React.createElement('div', { className: "text-red-600 bg-red-100 p-3 rounded-md text-center" }, error),
-                    React.createElement('div', { className: "flex-grow min-h-0" },
-                        isLoading ? React.createElement('div', { className: "flex flex-col justify-center items-center p-8 text-center h-full" },
-                            React.createElement('div', { className: "animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500" }),
-                            React.createElement('p', { className: "mt-4 text-gray-600 font-semibold" }, statusText)
-                        ) : searchResult ? React.createElement('div', { className: "h-full flex flex-col" },
-                            React.createElement('h3', { className: "text-xl font-bold mb-4 text-gray-800 flex-shrink-0" }, "답변:"),
-                            React.createElement('div', { className: "prose max-w-none p-6 bg-gray-50 rounded-lg border text-gray-800 overflow-y-auto" },
-                                React.createElement('div', { dangerouslySetInnerHTML: { __html: renderMarkdown(searchResult) } })
-                            )
-                        ) : files.length > 0 || sourceGroups.length > 0 ? React.createElement('div', { className: "flex flex-col justify-center items-center p-8 text-center h-full bg-gray-50 rounded-lg" },
-                            React.createElement(SearchIcon, { className: "w-16 h-16 text-gray-400" }),
-                            React.createElement('p', { className: "mt-4 text-gray-600" }, "이제 소스에 대해 질문할 수 있습니다.")
-                        ) : null
-                    )
-                )
-            )
-        ),
-        React.createElement(SourceViewerModal, { file: viewingFile, onClose: () => setViewingFile(null) })
-    );
-};
-
-// --- From components/ApiKeyModal.tsx ---
-const ApiKeyModal = ({ isOpen, onClose, onSave }) => {
-    const [key, setKey] = useState('');
-
-    if (!isOpen) return null;
-
-    const handleSave = () => {
-        if (key.trim()) {
-            onSave(key.trim());
-            setKey('');
-        }
-    };
-    
-    const handleKeyDown = (event) => {
-        if (event.key === 'Enter') {
-            handleSave();
-        }
-    };
-
-    return React.createElement('div', { className: "fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4", onClick: onClose },
-        React.createElement('div', { className: "bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4", onClick: e => e.stopPropagation() },
-            React.createElement('div', { className: "flex justify-between items-center" },
-                React.createElement('h3', { className: "text-xl font-bold text-gray-800" }, "Gemini API 키 입력"),
-                 React.createElement('button', { onClick: onClose, className: "p-1 text-gray-500 hover:bg-gray-200 rounded-full" },
-                   React.createElement(CloseIcon, { className: "w-6 h-6"})
-                )
-            ),
-            React.createElement('p', { className: "text-gray-600" }, "계속하려면 Gemini API 키를 입력하세요. API 키는 로컬 브라우저에 안전하게 저장됩니다."),
-            React.createElement('input', {
-                type: "password",
-                value: key,
-                onChange: (e) => setKey(e.target.value),
-                onKeyDown: handleKeyDown,
-                placeholder: "여기에 API 키를 붙여넣으세요",
-                className: "w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            }),
-             React.createElement('div', { className: "flex justify-between items-center" },
-                React.createElement('a', { href: "https://aistudio.google.com/app/apikey", target: "_blank", rel: "noopener noreferrer", className: "text-sm text-green-600 hover:underline" }, "API 키가 없으신가요? 여기에서 받으세요."),
-                React.createElement('button', { onClick: handleSave, className: "px-6 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 disabled:bg-gray-400", disabled: !key.trim() }, "저장")
-            )
-        )
-    );
-};
-
-
-// --- From App.tsx ---
-const App = () => {
-  const [resetKey, setResetKey] = useState(0);
-  const [apiKey, setApiKey] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  useEffect(() => {
-      const storedKey = localStorage.getItem('gemini_api_key');
-      if (storedKey) {
-          setApiKey(storedKey);
-          setIsModalOpen(false);
-      } else {
-          setIsModalOpen(true);
+      const MenuCard = ({ icon, title, description, link }) => {
+        const Tag = link ? 'a' : 'div';
+        const props = link ? { href: link } : {};
+
+        return (
+          <Tag
+            {...props}
+            className="group relative block rounded-xl border border-slate-800 bg-slate-800/50 p-6 shadow-lg transition-all duration-300 ease-in-out hover:border-blue-500/50 hover:shadow-blue-500/20 hover:-translate-y-1 cursor-pointer"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700 text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+              {icon}
+            </div>
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <p className="mt-2 text-sm text-slate-400">{description}</p>
+            <div className="absolute top-0 right-0 p-4 text-slate-600 opacity-0 transition-opacity group-hover:opacity-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </Tag>
+        );
+      };
+
+      // --- App Component ---
+      const menuItems = [
+        { title: '문서 검색', description: '관련 세무 문서 및 신고서를 검색하고 조회합니다.', icon: <DocumentSearchIcon />, link: 'Tax_Doc_Analyzer_API.html' },
+        { title: '전산자료 수집', description: 'ForCASS 전산자료수집합니다.', icon: <DataCollectionIcon />, link: 'ForCASS_1.html' },
+        { title: '파일목록 복사', description: '예치된 파일목록을 대상으로 자료수집합니다.', icon: <FileListIcon />, link: 'ForCASS_2.html' },
+        { title: '부정행위 탐지', description: 'AI 모델을 활용하여 잠재적인 세금 사기를 식별합니다.', icon: <FraudDetectionIcon /> },
+        { title: '사건 관리', description: '진행 중인 조사 및 사건을 추적하고 관리합니다.', icon: <CaseManagementIcon /> },
+        { title: '데이터 분석', description: '재무 기록 및 거래 패턴을 분석합니다.', icon: <DataAnalysisIcon /> },
+        { title: '보고서', description: '포괄적인 분석 보고서 및 요약 자료를 생성합니다.', icon: <ReportingIcon /> },
+        { title: '감사 추적', description: '시스템의 모든 사용자 활동 및 로그를 검토하고 추적합니다.', icon: <AuditTrailIcon /> },
+        { title: '설정', description: '시스템 설정 및 사용자 환경을 구성합니다.', icon: <SettingsIcon /> },
+        { title: '도움말 및 지원', description: '설명서를 확인하고 지원팀에 문의합니다.', icon: <HelpIcon /> },
+      ];
+
+      const App = () => {
+        const [searchTerm, setSearchTerm] = useState('');
+
+        const filteredMenuItems = useMemo(() => {
+          if (!searchTerm) {
+            return menuItems;
+          }
+          return menuItems.filter(
+            (item) =>
+              item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              item.description.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }, [searchTerm]);
+
+        return (
+          <div className="min-h-screen bg-slate-900 font-sans">
+            <Header />
+            <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+              <div className="max-w-3xl mx-auto text-center">
+                <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                  Tax Forensics
+                </h1>
+                <p className="mt-4 text-lg text-slate-300">
+                  Tax Forensics를 위한 중앙 허브입니다. 한 곳에서 모든 모듈에 접근할 수 있습니다.
+                </p>
+              </div>
+
+              <div className="mt-12 max-w-xl mx-auto">
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="모듈 검색..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="block w-full rounded-md border-0 bg-slate-800/80 py-3 pl-10 pr-3 text-slate-100 ring-1 ring-inset ring-slate-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 sm:text-sm sm:leading-6 transition"
+                  />
+                </div>
+              </div>
+
+              {filteredMenuItems.length > 0 ? (
+                <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredMenuItems.map((item) => (
+                    <MenuCard key={item.title} {...item} />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-16 text-center">
+                  <p className="text-slate-400 text-lg">검색과 일치하는 모듈을 찾을 수 없습니다.</p>
+                </div>
+              )}
+            </main>
+          </div>
+        );
+      };
+
+      // --- React DOM Render ---
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
       }
-  }, []);
-  
-  const handleStartOver = () => {
-    setResetKey(prevKey => prevKey + 1);
-  }
 
-  const handleSaveApiKey = (key) => {
-    localStorage.setItem('gemini_api_key', key);
-    setApiKey(key);
-    setIsModalOpen(false);
-    // Force a re-render of children that might depend on the new key
-    handleStartOver(); 
-  };
-  
-  const handleApiKeyClick = () => {
-      setIsModalOpen(true);
-  };
-
-  const handleModalClose = () => {
-      if(apiKey) { // Only allow closing if a key exists
-          setIsModalOpen(false);
-      }
-  };
-
-  return (
-    React.createElement('div', { className: "bg-gray-50 min-h-screen w-full font-sans text-gray-800 flex flex-col" },
-        React.createElement(Header, { onStartOver: handleStartOver, onApiKeyClick: handleApiKeyClick }),
-        React.createElement('main', { className: "flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full" },
-            React.createElement(FileSearch, { key: resetKey })
-        ),
-        React.createElement(Chatbot, { key: `chat-${resetKey}`}),
-        React.createElement(ApiKeyModal, {
-            isOpen: isModalOpen,
-            onClose: handleModalClose,
-            onSave: handleSaveApiKey
-        })
-    )
-  );
-};
-
-// --- From index.tsx ---
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  React.createElement(React.StrictMode, null,
-    React.createElement(App, null)
-  )
-);
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
     </script>
   </body>
 </html>
