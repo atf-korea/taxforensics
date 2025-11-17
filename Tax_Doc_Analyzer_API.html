@@ -364,7 +364,7 @@ const sendMessageToChat = async (message) => {
         throw new Error(GEN_AI_ERROR_MESSAGE);
     }
 
-    const searchKeywords = ['최신', '트렌드', '뉴스', '현재', '누가 이겼어', '최근 세법 개정'];
+    const searchKeywords = ['최신', '트렌드', '뉴스', '현재', '세무조사', '최근 세법 개정'];
     const shouldUseSearch = searchKeywords.some(keyword => message.toLowerCase().includes(keyword));
     const genAI = getAi();
 
@@ -1269,4 +1269,5 @@ root.render(
   </body>
 
 </html>
+
 
