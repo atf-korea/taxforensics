@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>파일목록 복사 스크립트 생성기</title>
+    <title>파일목록 복사</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="importmap">
       {
@@ -486,7 +486,7 @@
                           onClick: handleGenerateScript,
                           disabled: !file || !destinationPrefix,
                           className: "w-full px-6 py-4 bg-cyan-600 text-white font-bold text-lg rounded-lg hover:bg-cyan-700 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors"
-                      }, "복사 스크립트 생성")
+                      }, "파일목록 복사")
                   )
                 )
               );
