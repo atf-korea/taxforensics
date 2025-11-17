@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
   <head>
@@ -100,9 +101,9 @@
       // --- UI Components ---
       const Header = () => {
         return (
-          <header className="bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+          <header className="bg-slate-900/50">
             <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between h-16 border-b border-slate-800">
+              <div className="flex items-center justify-between h-16">
                 <div className="flex items-center">
                   <svg className="h-8 w-8 text-blue-500" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round">
                     <path stroke="none" d="M0 0h24v24H0z" />
@@ -217,36 +218,40 @@
 
         return (
           <div className="min-h-screen bg-slate-900 font-sans">
-            <Header />
-            <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-              <div className="max-w-3xl mx-auto text-center">
-                <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                  Tax AI & Forensics Hub
-                </h1>
-                <p className="mt-4 text-lg text-slate-300">
-                  Tax AI 및 Forensics를 위한 중앙 허브입니다. 한 곳에서 모든 모듈에 접근할 수 있습니다.
-                </p>
-              </div>
-
-              <div className="mt-12 max-w-xl mx-auto">
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
-                    </svg>
+            <div className="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-sm border-b border-slate-800">
+              <Header />
+              <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
+                <div className="max-w-xl mx-auto">
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="모듈 검색..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="block w-full rounded-md border-0 bg-slate-800/80 py-3 pl-10 pr-3 text-slate-100 ring-1 ring-inset ring-slate-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 sm:text-sm sm:leading-6 transition"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    placeholder="모듈 검색..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="block w-full rounded-md border-0 bg-slate-800/80 py-3 pl-10 pr-3 text-slate-100 ring-1 ring-inset ring-slate-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 sm:text-sm sm:leading-6 transition"
-                  />
                 </div>
               </div>
+            </div>
+
+            <main className="container mx-auto px-4 pb-8 sm:px-6 lg:px-8">
+               <div className="max-w-3xl mx-auto text-center pt-8 pb-6">
+                  <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                    Tax AI & Forensics Hub
+                  </h1>
+                  <p className="mt-4 text-lg text-slate-300">
+                    Tax AI 및 Forensics를 위한 중앙 허브입니다. 한 곳에서 모든 모듈에 접근할 수 있습니다.
+                  </p>
+                </div>
 
               {filteredMenuItems.length > 0 ? (
-                <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredMenuItems.map((item) => (
                     <MenuCard key={item.title} {...item} />
                   ))}
@@ -276,25 +281,3 @@
     </script>
   </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
