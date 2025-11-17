@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Tax Doc Analyzer</title>
+    <title>AI Tax Forensics Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.7.2/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -448,13 +448,10 @@ const searchInFiles = async (query, instruction, selectedFileNames) => {
         
         const baseInstruction = instruction.trim() !== '' 
             ? instruction 
-            : `당신은 Tax Doc를 전문으로 다루는 지능형 검색 어시턴트입니다. 당신의 임무는 아래에 제공된 파일들의 문맥만을 기반으로 사용자의 질문에 답변하는 것입니다.
-분석을 위해서 외부 지식을 사용하셔도 됩니다.
-문맥에서 답을 찾을 수 없는 경우, 명확하게 그렇게 밝히십시오.
+            : `당신은 Tax Forensics을 전문으로 다루는 지능형 검색 어시턴트입니다. 당신의 임무는 아래에 제공된 파일들의 문맥만을 기반으로 사용자의 질문에 답변하는 것입니다.
+분석을 위해서 외부 지식을 사용하셔도 되며, 문맥에서 답을 찾을 수 없는 경우, 명확하게 그렇게 밝히십시오.
 정보를 찾은 파일 이름을 인용하십시오.
 답변은 간결하게 Markdown으로 구성하고, 블렛과 번호 목록을 이용하세요.`;
-
-
         const answerPrompt = `
             사용자 질문: "${query}"
     
@@ -490,7 +487,7 @@ const Header = ({ onStartOver, onApiKeyClick }) => {
                     React.createElement('div', { className: "flex items-center cursor-pointer", onClick: onStartOver },
                         React.createElement(ScaleIcon, { className: "h-8 w-8 text-green-600" }),
                         React.createElement('h1', { className: "ml-2 text-2xl font-bold text-gray-800 hidden sm:block" },
-                            "AI Tax Doc Analyzer"
+                            "AI Tax Forensics Analyzer"
                         )
                     ),
                     React.createElement('nav', { className: "flex items-center space-x-2 md:space-x-4" },
@@ -1271,4 +1268,5 @@ root.render(
 );
     </script>
   </body>
+
 </html>
