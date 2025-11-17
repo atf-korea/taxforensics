@@ -97,6 +97,11 @@
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16v4m-2-2h4m3 12v4m-2-2h4M3 12h18m-9-9v18" />
         </svg>
       );
+      const AIIcon1 = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      );
 
       
       // --- UI Components ---
@@ -159,7 +164,7 @@
         { title: '언론보도 세무분석 AI', description: '세무조사 관련 언론 보도자료 심층적으로 분석을 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/c25fd0f043fa' },
         { title: '예치대응 법률 AI', description: '국세청(NTS)의 예치조사에 법률적 대응 전문가입니다.', icon: <BookOpenIcon />, link: 'https://gemini.google.com/gem/ebc9204e5bff' },
         { title: 'Tax Forensic AI', description: '전산자료 예치에 대한 전문적인 의견이나 해결방법을 제시합니다.', icon: <SparklesIcon />, link: 'https://gemini.google.com/gem/ba214c0cc64c' },
-        { title: '조세범칙(포탈,질서범) 전문', description: '조세범칙사건에 대해 전문적인 의견이나 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/371a7bb1b7b1' },        
+        { title: '조세범칙(포탈,질서범) 전문', description: '조세범칙사건에 대해 전문적인 의견이나 답변을 제공합니다.', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/371a7bb1b7b1' },        
         { title: '세무조사 관련 지침', description: '세무조사 관리지침, 범칙업무처리 등 내부지침의 정보를 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/38f7d9cac817' },        
         { title: '법률의견서(합리적 의견) 작성', description: '법적 불확실성이 있는 사안에 대한 변호사의 심층적인 법률적 판단', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/2cc7d1e14f47' },
         { title: '법률의견서(깨끗한 의견) 작성', description: '법적 리스크가 거의 없는 명확한 사안에 대한 확정적 판단', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/5c4f3f5406ed' },
@@ -171,12 +176,12 @@
         { title: '전산자료 수집 ForCASS', description: '클라이언트의 전자문서 점검을 위한 자료를 수집(예치)합니다.', icon: <DataCollectionIcon />, link: 'https://taxforensics.vercel.app/forcass/ForCASS.html' },
         { title: '파일목록 복사 FileList_Copy', description: '예치된 파일목록으로 예치자료를 동일하게 수집합니다.', icon: <FileListIcon />, link: 'https://taxforensics.vercel.app/forcass/ListCopy.html' },
         { title: 'Forensic Tools', description: '각종 포렌직 Tool을 다운로드하고 저장하는 장소입니다.', icon: <FolderDownloadIcon />, link: 'https://m.cafe.naver.com/ca-fe/web/cafes/30597224/menus/13' },        
-        { title: '비상장주식 평가', description: '비상장 주식에 대하여 상증법상 보충적 평가를 실시합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/fd18cf0d0270' },
+        { title: '비상장주식 평가', description: '비상장 주식에 대하여 상증법상 보충적 평가를 실시합니다.', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/fd18cf0d0270' },
         { title: '비상장법인 승계플랜', description: '비상장법인 가업승계 등 절세효과 및 거래가액 산정', icon: <AIIcon />, link: 'https://gemini.google.com/gem/7086ba7b81d3' },        
         { title: '사업 솔루션 제안', description: '가업승계 등 위한 사업구조 솔루션을 전문적으로 제안합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/5a6b167d6646' },
-        { title: '기업 구조조정 전문', description: '기업 구조조정에 관하여 전문적 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/3092a4ec5b04' },        
+        { title: '기업 구조조정 전문', description: '기업 구조조정에 관하여 전문적 답변을 제공합니다.', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/3092a4ec5b04' },        
         { title: '1세대1주택 전문가', description: '1세대 1주택 양도 전문 상담을 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/c49f8ced7902' },        
-        { title: '상속 및 증여 전문', description: '사실관계에 따른 상속 또는 증여 관련 각종 신고절차 및 세무', icon: <AIIcon />, link: 'https://gemini.google.com/gem/a6b98a2a4fa4' },
+        { title: '상속 및 증여 전문', description: '사실관계에 따른 상속 또는 증여 관련 각종 신고절차 및 세무', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/a6b98a2a4fa4' },
         { title: '재산제(상속,증여,양도) 전문', description: '재산관련 세목(상속,증여,양도)에 대하여 전문적이 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/3070549a3158' },        
         { title: '해외자회사 설립', description: '해외자회사 설립관련 절차 및 세무', icon: <AIIcon />, link: 'https://gemini.google.com/gem/9acff59afb49' },        
         { title: '사업용부동산 매각 및 평가', description: '사업용 자산의 매각 및 평가를 전문으로 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/20303b91bf69' },
@@ -282,6 +287,7 @@
     </script>
   </body>
 </html>
+
 
 
 
