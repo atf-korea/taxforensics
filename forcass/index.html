@@ -1,0 +1,291 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tax AI & Tax Forensics Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+          "react/": "https://aistudiocdn.com/react@^19.2.0/",
+          "react": "https://aistudiocdn.com/react@^19.2.0"
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body class="bg-slate-900 text-slate-100">
+    <div id="root"></div>
+    <script type="text/babel" data-type="module">
+      import React, { useState, useMemo } from 'react';
+      import ReactDOM from 'react-dom/client';
+
+      // --- Icon Components ---
+      const DocumentSearchIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m5-6h2m-1-2v4m5.707 5.293a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414 0l-4.293-4.293a6.5 6.5 0 111.414-1.414l4.293 4.293z" />
+        </svg>
+      );
+      const DataAnalysisIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      );
+      const FraudDetectionIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+      const ReportingIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      );
+      const CaseManagementIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      );
+      const AuditTrailIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      );
+      const SettingsIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      );
+      const HelpIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+      const DataCollectionIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10m16-10v10M4 13h16m0-6h-4a2 2 0 00-2 2v0a2 2 0 002 2h4m0 6h-4a2 2 0 01-2-2v0a2 2 0 012-2h4M4 7a2 2 0 012-2h12a2 2 0 012 2M4 17a2 2 0 002 2h12a2 2 0 002-2" />
+        </svg>
+      );
+      const FileListIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      );
+      const SparklesIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.293 2.293a1 1 0 010 1.414L10 16l-4 4-4-4 5.293-5.293a1 1 0 011.414 0L10 10m9 5l-2.293-2.293a1 1 0 00-1.414 0L10 17l4 4 4-4-5.293-5.293a1 1 0 00-1.414 0L10 14" />
+        </svg>
+      );
+      const BookOpenIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      );
+      const FolderDownloadIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      );
+      const AIIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16v4m-2-2h4m3 12v4m-2-2h4M3 12h18m-9-9v18" />
+        </svg>
+      );
+      const AIIcon1 = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      );
+
+      
+      // --- UI Components ---
+      const Header = () => {
+        return (
+          <header className="bg-slate-900/50">
+            <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex items-center">
+                  <svg className="h-8 w-8 text-blue-500" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" />
+                    <path d="M9 12l-4.463 4.463a5 5 0 1 1 7.071 -7.071l4.463 -4.463" />
+                    <path d="M12.5 5.5l5 5" />
+                    <path d="M14.5 7.5l5 5" />
+                    <path d="M3 21l3.536-3.536" />
+                    <path d="M17.464 8.536l3.536 -3.536" />
+                  </svg>
+                  <span className="ml-3 text-xl font-bold text-white">Tax AI & Forensics Hub</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </button>
+                  <img className="h-9 w-9 rounded-full ring-2 ring-slate-700" src="https://picsum.photos/100/100" alt="User Avatar" />
+                </div>
+              </div>
+            </nav>
+          </header>
+        );
+      };
+
+      const MenuCard = ({ icon, title, description, link }) => {
+        const Tag = link ? 'a' : 'div';
+        const props = link ? { href: link, target: '_blank', rel: 'noopener noreferrer' } : {};
+
+        return (
+          <Tag
+            {...props}
+            className="group relative block rounded-xl border border-slate-800 bg-slate-800/50 p-6 shadow-lg transition-all duration-300 ease-in-out hover:border-blue-500/50 hover:shadow-blue-500/20 hover:-translate-y-1 cursor-pointer"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700 text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+              {icon}
+            </div>
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <p className="mt-2 text-sm text-slate-400">{description}</p>
+            <div className="absolute top-0 right-0 p-4 text-slate-600 opacity-0 transition-opacity group-hover:opacity-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </Tag>
+        );
+      };
+
+      // --- App Component ---
+      const menuItems = [
+        { title: 'AI 세법 전문가', description: '조세법 전문가에게 세법의 궁금한 모든 것을 물어보세요.', icon: <HelpIcon />, link: 'https://gemini.google.com/gem/051f45ba7069' },        
+        { title: '언론보도 세무분석 AI', description: '세무조사 관련 언론 보도자료 심층적으로 분석을 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/c25fd0f043fa' },
+        { title: '예치대응 법률 AI', description: '국세청(NTS)의 예치조사에 법률적 대응 전문가입니다.', icon: <BookOpenIcon />, link: 'https://gemini.google.com/gem/ebc9204e5bff' },
+        { title: 'Tax Forensic AI', description: '전산자료 예치,포렌직 관련 전문적인 의견이나 해결방법을 제시합니다.', icon: <SparklesIcon />, link: 'https://gemini.google.com/gem/ba214c0cc64c' },
+        { title: '조세범칙(포탈,질서범) 전문', description: '조세범칙사건에 대해 전문적인 의견이나 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/371a7bb1b7b1' },        
+        { title: '세무조사 관련 지침', description: '세무조사 관리지침, 범칙업무처리 등 내부지침의 정보를 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/38f7d9cac817' },        
+        { title: '법률의견서(합리적 의견) 작성', description: '법적 불확실성이 있는 사안에 대한 변호사의 심층적인 법률적 판단', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/2cc7d1e14f47' },
+        { title: '법률의견서(깨끗한 의견) 작성', description: '법적 리스크가 거의 없는 명확한 사안에 대한 확정적 판단', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/5c4f3f5406ed' },
+        { title: '법률의견서(사실상 의견) 작성', description: '특정 사실관계에 국한된 법률 검토 결과', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/3bed5fa8cdc8' },
+        { title: '법률의견서(제 3자 의견) 작성', description: '계약 등 제3자 이해관계인을 위한 법적 견해', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/526d70788bf6' },        
+        { title: '법률의견서(감사용 의견) 작성', description: '회계감사인을 위한 법적 분쟁 리스크 평가', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/dd95b605cb0f' },        
+        { title: '법률의견서(유형 선택형) 작성', description: '사건에 대하여 법률의견서 유형을 선택하여 작성합니다.', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/e8fd568bdd71' },  
+        { title: 'Tax Forensic 분석 AI', description: '각종 전자문서를 전문적으로 일괄하여 동시에 분석을 수행합니다.', icon: <DocumentSearchIcon />, link: 'Tax_Doc_Analyzer_API.html' },
+        { title: '전산자료 수집 ForCASS', description: '클라이언트의 전자문서 점검을 위한 자료를 수집(예치)합니다.', icon: <DataCollectionIcon />, link: 'https://taxforensics.vercel.app/forcass/ForCASS.html' },
+        { title: '파일목록 복사 FileList_Copy', description: '예치된 파일목록으로 예치자료를 동일하게 수집합니다.', icon: <FileListIcon />, link: 'https://taxforensics.vercel.app/forcass/ListCopy.html' },
+        { title: 'Forensic Tools', description: '각종 포렌직 Tool을 다운로드하고 저장하는 장소입니다.', icon: <FolderDownloadIcon />, link: 'https://m.cafe.naver.com/ca-fe/web/cafes/30597224/menus/13' },        
+        { title: '비상장주식 평가', description: '비상장 주식에 대하여 상증법상 보충적 평가를 실시합니다.', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/fd18cf0d0270' },
+        { title: '비상장법인 승계플랜', description: '비상장법인 가업승계 등 절세효과 및 거래가액 산정', icon: <AIIcon />, link: 'https://gemini.google.com/gem/7086ba7b81d3' },        
+        { title: '사업 솔루션 제안', description: '가업승계 등 위한 사업구조 솔루션을 전문적으로 제안합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/5a6b167d6646' },
+        { title: '기업 구조조정 전문', description: '기업 구조조정에 관하여 전문적 답변을 제공합니다.', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/3092a4ec5b04' },        
+        { title: '1세대1주택 전문가', description: '1세대 1주택 양도 전문 상담을 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/c49f8ced7902' },        
+        { title: '상속 및 증여 전문', description: '사실관계에 따른 상속 또는 증여 관련 각종 신고절차 및 세무', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/a6b98a2a4fa4' },
+        { title: '재산제(상속,증여,양도) 전문', description: '재산관련 세목(상속,증여,양도)에 대하여 전문적이 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/3070549a3158' },        
+        { title: '사업용부동산 매각 및 평가', description: '사업용 자산의 매각 및 평가를 전문으로 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/20303b91bf69' },
+        { title: '해외자회사 설립 등 국제조세', description: '해외자회사 설립관련 절차 및 국제조세관련 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/9acff59afb49' },      
+        { title: '국제거래 이전가격 분석', description: '국제거래에서 발생하는 이전가격을 분석합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/552713bb53f' },   
+        { title: '세금계산기', description: '양도,상속,증여,취득, 등록세 등 세금 계산하기', icon: <AIIcon />, link: 'https://sites.google.com/view/taxtalk' },    
+        { title: '기업 임원진 검색(DART)', description: '전자공시시스템상의 임원진을 검색합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/c0967edc3625' },
+        { title: 'AI 토너먼트 질문', description: '각 AI에게 토너먼트식 게임방식으로 질문하여 의견을 받을 수 있습니다.', icon: <AIIcon />, link: 'https://lmarena.ai/?mode=side-by-side' },
+        { title: '부정행위 탐지', description: 'AI 모델을 활용하여 잠재적인 세금 사기를 식별합니다.', icon: <FraudDetectionIcon /> },
+        { title: '사건 관리', description: '진행 중인 조사 및 사건을 추적하고 관리합니다.', icon: <CaseManagementIcon /> },
+        { title: '데이터 분석', description: '재무 기록 및 거래 패턴을 분석합니다.', icon: <DataAnalysisIcon /> },
+        { title: '감사 추적', description: '시스템의 모든 사용자 활동 및 로그를 검토하고 추적합니다.', icon: <AuditTrailIcon /> },        
+        { title: '보고서', description: '포괄적인 분석 보고서 및 요약 자료를 생성합니다.', icon: <ReportingIcon /> },        
+        { title: '설정', description: '시스템 설정 및 사용자 환경을 구성합니다.', icon: <SettingsIcon /> },
+        { title: '도움말 및 지원', description: '설명서를 확인하고 지원팀에 문의합니다.', icon: <HelpIcon /> },
+        { title: '기업 수익,안정,성장 분석', description: '기업 분석 : 성장, 수익, 안정성을 한눈에!', icon: <AIIcon />, link: 'https://gemini.google.com/gem/e655da9c94a7' },        
+        { title: '주식 종목별 분석', description: '기업의 주식에 대한 분석 전문 AI', icon: <AIIcon />, link: 'https://gemini.google.com/gem/0e26ad67eb5d' },
+        { title: '주식매매전략 분석', description: '주식매매전략 분석 전문 AI', icon: <AIIcon />, link: 'https://gemini.google.com/gem/7d03350b12e2' },        
+        { title: '주식 손절·익절 타이밍 분석', description: '주식 투자자 전용 손절·익절 타이밍 분석', icon: <AIIcon />, link: 'https://gemini.google.com/gem/a5c3c595acb7' }, 
+        { title: '사주풀이', description: '생년월일시를 넣어서 본인의 사주풀이합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/d4305ea27a65' },  
+        { title: '꿈해몽', description: '키워드 방식에 의하여 꿈해몽을 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/ee7ebe8beba4' },     
+        { title: '오늘의 운세', description: '생년월일만 넣어서 오늘의 운세을 봅니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/cafe2c648b69' },
+        { title: 'My OTT', description: '심심풀이, OTT 보기 등 Time Killing', icon: <AIIcon />, link: 'https://sites.google.com/view/myvideosites' },  
+        { title: '맛집 추천 AI', description: '찾고자 하는 지역의 맛집 10선을 알려줍니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/1IhPXgv70N4cQLE7RDSshGiUSHHoX8sYM' },
+        { title: '프로그램', description: 'Office, 한글, 엑셀, 워드, PPT 등 다운로드', icon: <AIIcon />, link: 'https://sites.google.com/view/kkmsetc' },
+        { title: 'NTS PPMS', description: 'PPMS', icon: <AIIcon />, link: 'https://sites.google.com/view/kkmsetc/ppms' },     
+        { title: 'NTS TAMS', description: 'TAMS', icon: <AIIcon />, link: 'https://sites.google.com/view/kkmsetc/tams' },    
+      ];
+
+      const App = () => {
+        const [searchTerm, setSearchTerm] = useState('');
+
+        const filteredMenuItems = useMemo(() => {
+          if (!searchTerm) {
+            return menuItems;
+          }
+          return menuItems.filter(
+            (item) =>
+              item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              item.description.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }, [searchTerm]);
+
+        return (
+          <div className="min-h-screen bg-slate-900 font-sans">
+            <div className="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-sm border-b border-slate-800">
+              <Header />
+              <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
+                <div className="max-w-xl mx-auto">
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="모듈 검색..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="block w-full rounded-md border-0 bg-slate-800/80 py-3 pl-10 pr-3 text-slate-100 ring-1 ring-inset ring-slate-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 sm:text-sm sm:leading-6 transition"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <main className="container mx-auto px-4 pb-8 sm:px-6 lg:px-8">
+               <div className="max-w-3xl mx-auto text-center pt-8 pb-6">
+                  <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                    Tax AI & Forensics Hub
+                  </h2>
+                  <p className="mt-4 text-lg text-slate-300">
+                    Tax AI 및 Forensics를 위한 허브입니다. 한 곳에서 모든 모듈에 접근할 수 있습니다.
+                  </p>
+                </div>
+
+              {filteredMenuItems.length > 0 ? (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredMenuItems.map((item) => (
+                    <MenuCard key={item.title} {...item} />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-16 text-center">
+                  <p className="text-slate-400 text-lg">검색과 일치하는 모듈을 찾을 수 없습니다.</p>
+                </div>
+              )}
+            </main>
+          </div>
+        );
+      };
+
+      // --- React DOM Render ---
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
+    </script>
+  </body>
+</html>
