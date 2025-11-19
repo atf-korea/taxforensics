@@ -21,13 +21,18 @@
   <body class="bg-slate-900 text-slate-100">
     <div id="root"></div>
     <script type="text/babel" data-type="module">
-      import React, { useState, useMemo } from 'react';
+      import React, { useState, useEffect, useMemo } from 'react';
       import ReactDOM from 'react-dom/client';
+
+      // --- Google Sheets API Configuration ---
+      const GOOGLE_API_KEY = 'AIzaSyBS1kIHPn1j2iCL4npiitSo_6Sm0M42450';
+      const GOOGLE_SHEET_ID = '1CtvvJmwuEw1LA9GjGe1RncKMTdECQxwU-CVFkj122iA';
+      const SHEET_RANGE = 'Tax_Hub!A1:D'; 
 
       // --- Icon Components ---
       const DocumentSearchIcon = () => (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m5-6h2m-1-2v4m5.707 5.293a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414 0l-4.293-4.293a6.5 6.5 0 111.414-1.414l4.293 4.293z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m5-6h2m-1-2v4m5.707 5.293a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414 0l-4.293-4.293a6.5 6.5 111.414-1.414l4.293 4.293z" />
         </svg>
       );
       const DataAnalysisIcon = () => (
@@ -103,6 +108,36 @@
         </svg>
       );
 
+      // Map strings from Sheet to Components
+      const ICON_MAP = {
+        'DocumentSearchIcon': DocumentSearchIcon,
+        'DataAnalysisIcon': DataAnalysisIcon,
+        'FraudDetectionIcon': FraudDetectionIcon,
+        'ReportingIcon': ReportingIcon,
+        'CaseManagementIcon': CaseManagementIcon,
+        'AuditTrailIcon': AuditTrailIcon,
+        'SettingsIcon': SettingsIcon,
+        'HelpIcon': HelpIcon,
+        'DataCollectionIcon': DataCollectionIcon,
+        'FileListIcon': FileListIcon,
+        'SparklesIcon': SparklesIcon,
+        'BookOpenIcon': BookOpenIcon,
+        'FolderDownloadIcon': FolderDownloadIcon,
+        'AIIcon': AIIcon,
+        'AIIcon1': AIIcon1
+      };
+
+      // Default Fallback Items (Used when API fails)
+      const DEFAULT_MENU_ITEMS_DATA = [
+        { title: "세무 법령 검색", description: "AI 기반 세법 및 판례 검색", link: "", iconName: "DocumentSearchIcon" },
+        { title: "데이터 분석", description: "납세자 데이터 심층 분석", link: "", iconName: "DataAnalysisIcon" },
+        { title: "탈세 혐의 탐지", description: "이상 거래 및 탈세 혐의점 포착", link: "", iconName: "FraudDetectionIcon" },
+        { title: "조사 보고서", description: "자동화된 조사 결과 보고서 생성", link: "", iconName: "ReportingIcon" },
+        { title: "사건 관리", description: "조사 진행 현황 및 이력 관리", link: "", iconName: "CaseManagementIcon" },
+        { title: "감사 로그", description: "시스템 접근 및 작업 이력", link: "", iconName: "AuditTrailIcon" },
+        { title: "자료 수집", description: "외부 기관 자료 연동 및 수집", link: "", iconName: "DataCollectionIcon" },
+        { title: "설정", description: "사용자 및 시스템 설정", link: "", iconName: "SettingsIcon" }
+      ];
       
       // --- UI Components ---
       const Header = () => {
@@ -159,72 +194,289 @@
       };
 
       // --- App Component ---
-      const menuItems = [
-        { title: 'AI 세법 전문가', description: '조세법 전문가에게 세법의 궁금한 모든 것을 물어보세요.', icon: <HelpIcon />, link: 'https://gemini.google.com/gem/051f45ba7069' },        
-        { title: '재산(상속,증여,양도)세 전문', description: '재산관련 세목(상속,증여,양도)에 대하여 전문적인 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/3070549a3158' },                
-        { title: '언론보도 세무분석 AI', description: '세무조사 관련 언론 보도내용을 심층적으로 분석합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/c25fd0f043fa' },
-        { title: '예치대응 법률 AI', description: '국세청(NTS)의 예치조사에 법률적 대응 전문가입니다.', icon: <BookOpenIcon />, link: 'https://gemini.google.com/gem/ebc9204e5bff' },
-        { title: 'Tax Forensic AI', description: '전산자료 예치,포렌직 관련 전문적인 의견이나 해결방법을 제시합니다.', icon: <SparklesIcon />, link: 'https://gemini.google.com/gem/ba214c0cc64c' },
-        { title: '조세범칙(포탈,질서범) 전문', description: '조세범칙사건에 대해 전문적인 의견이나 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/371a7bb1b7b1' },        
-        { title: '세무조사 관련 지침', description: '세무조사 관리지침, 범칙업무처리 등 내부지침의 정보를 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/38f7d9cac817' },        
-        { title: '법률의견서(합리적 의견) 작성', description: '법적 불확실성이 있는 사안에 대한 변호사의 심층적인 법률적 판단', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/2cc7d1e14f47' },
-        { title: '법률의견서(깨끗한 의견) 작성', description: '법적 리스크가 거의 없는 명확한 사안에 대한 확정적 판단', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/5c4f3f5406ed' },
-        { title: '법률의견서(사실상 의견) 작성', description: '특정 사실관계에 국한된 법률 검토 결과', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/3bed5fa8cdc8' },
-        { title: '법률의견서(제 3자 의견) 작성', description: '계약 등 제3자 이해관계인을 위한 법적 견해', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/526d70788bf6' },        
-        { title: '법률의견서(감사용 의견) 작성', description: '회계감사인을 위한 법적 분쟁 리스크 평가', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/dd95b605cb0f' },        
-        { title: '법률의견서(유형 선택형) 작성', description: '사건에 대하여 법률의견서 유형을 선택하여 작성합니다.', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/e8fd568bdd71' },  
-        { title: '법률규정 등 찾기', description: '법률조항, 판례번호, 예규번호 등 검색합니다.', icon: <FileListIcon />, link: 'https://gemini.google.com/gem/18pGlPphaY0qTtT9SShso_6dYfYGiNjkZ' },          
-        { title: 'Tax Forensic 분석 AI', description: '각종 전자문서를 전문적으로 일괄하여 동시에 분석을 수행합니다.', icon: <DocumentSearchIcon />, link: 'Tax_Doc_Analyzer_API.html' },
-        { title: '전산자료 수집 ForCASS', description: '클라이언트의 전자문서 점검을 위한 자료를 수집(예치)합니다.', icon: <DataCollectionIcon />, link: 'https://taxforensics.vercel.app/forcass/ForCASS.html' },
-        { title: '파일목록 복사 FileList_Copy', description: '예치된 파일목록으로 예치자료를 동일하게 수집합니다.', icon: <FileListIcon />, link: 'https://taxforensics.vercel.app/forcass/ListCopy.html' },
-        { title: 'Forensic Tools', description: '각종 포렌직 Tool을 다운로드하고 저장하는 장소입니다.', icon: <FolderDownloadIcon />, link: 'https://m.cafe.naver.com/ca-fe/web/cafes/30597224/menus/13' },        
-        { title: '비상장주식 평가', description: '비상장 주식에 대하여 상증법상 보충적 평가를 실시합니다.', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/fd18cf0d0270' },
-        { title: '비상장법인 승계플랜', description: '비상장법인 가업승계 등 절세효과 및 거래가액 산정', icon: <AIIcon />, link: 'https://gemini.google.com/gem/7086ba7b81d3' },        
-        { title: '사업 솔루션 제안', description: '가업승계 등 위한 사업구조 솔루션을 전문적으로 제안합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/5a6b167d6646' },
-        { title: '기업 구조조정 전문', description: '기업 구조조정에 관하여 전문적 답변을 제공합니다.', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/3092a4ec5b04' },        
-        { title: '1세대1주택 전문가', description: '1세대 1주택 양도 전문 상담을 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/c49f8ced7902' },        
-        { title: '상속 및 증여 전문', description: '사실관계에 따른 상속 또는 증여 관련 각종 신고절차 및 세무', icon: <AIIcon1 />, link: 'https://gemini.google.com/gem/a6b98a2a4fa4' },
-        { title: '사업용부동산 매각 및 평가', description: '사업용 자산의 매각 및 평가를 전문으로 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/20303b91bf69' },
-        { title: '해외자회사 설립 등 국제조세', description: '해외자회사 설립관련 절차 및 국제조세관련 답변을 제공합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/9acff59afb49' },      
-        { title: '국제거래 이전가격 분석', description: '국제거래에서 발생하는 이전가격을 분석합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/552713bb53f' },   
-        { title: '세금계산기', description: '양도,상속,증여,취득, 등록세 등 세금 계산하기', icon: <AIIcon />, link: 'https://sites.google.com/view/taxtalk' },    
-        { title: '기업 임원진 검색(DART)', description: '전자공시시스템상의 임원진을 검색합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/c0967edc3625' },
-        { title: 'AI 토너먼트 질문', description: '각 AI에게 토너먼트식 게임방식으로 질문하여 의견을 받을 수 있습니다.', icon: <AIIcon />, link: 'https://lmarena.ai/?mode=side-by-side' },
-        { title: '부정행위 탐지', description: 'AI 모델을 활용하여 잠재적인 세금 사기를 식별합니다.', icon: <FraudDetectionIcon /> },
-        { title: '사건 관리', description: '진행 중인 조사 및 사건을 추적하고 관리합니다.', icon: <CaseManagementIcon /> },
-        { title: '데이터 분석', description: '재무 기록 및 거래 패턴을 분석합니다.', icon: <DataAnalysisIcon /> },
-        { title: '감사 추적', description: '시스템의 모든 사용자 활동 및 로그를 검토하고 추적합니다.', icon: <AuditTrailIcon /> },        
-        { title: '보고서', description: '포괄적인 분석 보고서 및 요약 자료를 생성합니다.', icon: <ReportingIcon /> },        
-        { title: '설정', description: '시스템 설정 및 사용자 환경을 구성합니다.', icon: <SettingsIcon /> },
-        { title: '도움말 및 지원', description: '설명서를 확인하고 지원팀에 문의합니다.', icon: <HelpIcon /> },
-        { title: '기업 수익,안정,성장 분석', description: '기업 분석 : 성장, 수익, 안정성을 한눈에!', icon: <AIIcon />, link: 'https://gemini.google.com/gem/e655da9c94a7' },        
-        { title: '주식 종목별 분석', description: '기업의 주식에 대한 분석 전문 AI', icon: <AIIcon />, link: 'https://gemini.google.com/gem/0e26ad67eb5d' },
-        { title: '주식매매전략 분석', description: '주식매매전략 분석 전문 AI', icon: <AIIcon />, link: 'https://gemini.google.com/gem/7d03350b12e2' },        
-        { title: '주식 손절·익절 타이밍 분석', description: '주식 투자자 전용 손절·익절 타이밍 분석', icon: <AIIcon />, link: 'https://gemini.google.com/gem/a5c3c595acb7' }, 
-        { title: '사주풀이', description: '생년월일시를 넣어서 본인의 사주풀이합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/d4305ea27a65' },  
-        { title: '꿈해몽', description: '키워드 방식에 의하여 꿈해몽을 합니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/ee7ebe8beba4' },     
-        { title: '오늘의 운세', description: '생년월일만 넣어서 오늘의 운세을 봅니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/cafe2c648b69' },
-        { title: 'My OTT', description: '심심풀이, OTT 보기 등 Time Killing', icon: <AIIcon />, link: 'https://sites.google.com/view/myvideosites' },  
-        { title: '맛집 추천 AI', description: '찾고자 하는 지역의 맛집 10선을 알려줍니다.', icon: <AIIcon />, link: 'https://gemini.google.com/gem/1IhPXgv70N4cQLE7RDSshGiUSHHoX8sYM' },
-        { title: '프로그램', description: 'Office, 한글, 엑셀, 워드, PPT 등 다운로드', icon: <AIIcon />, link: 'https://sites.google.com/view/kkmsetc' },
-        { title: 'NTS PPMS', description: 'PPMS', icon: <AIIcon />, link: 'https://sites.google.com/view/kkmsetc/ppms' },     
-        { title: 'NTS TAMS', description: 'TAMS', icon: <AIIcon />, link: 'https://sites.google.com/view/kkmsetc/tams' },    
-        { title: '텔레그램 Web', description: '어떠 자료든 주고받을 수 있는 텔레그램(Telegram)웹버전입니다.', icon: <AIIcon />, link: 'https://web.telegram.org/k/' },            
-      ];
-
       const App = () => {
         const [searchTerm, setSearchTerm] = useState('');
+        const [menuItems, setMenuItems] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState(null);
+        const [usingFallback, setUsingFallback] = useState(false);
+        const [showRawError, setShowRawError] = useState(false);
+
+        const fetchMenuItems = async () => {
+            setLoading(true);
+            setError(null);
+            
+            const encodedRange = encodeURIComponent(SHEET_RANGE);
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${encodedRange}?key=${GOOGLE_API_KEY}`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    referrerPolicy: 'no-referrer' 
+                });
+                
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw { status: response.status, message: "API 응답이 올바른 JSON 형식이 아닙니다.", rawData: text };
+                }
+                
+                if (!response.ok) {
+                    // Throw a structured error object that includes all details from Google
+                    throw { 
+                        status: response.status, 
+                        message: data.error?.message || response.statusText,
+                        details: data.error?.details,
+                        statusText: data.error?.status || 'UNKNOWN_ERROR',
+                        rawData: data
+                    };
+                }
+
+                if (!data.values || data.values.length === 0) {
+                    setMenuItems([]);
+                    return;
+                }
+                
+                const rows = data.values;
+                const items = rows.slice(1).map(row => {
+                    const title = row[0] || '';
+                    const description = row[1] || '';
+                    const link = row[2] || '';
+                    const iconName = row[3] || 'AIIcon';
+                    const IconComponent = ICON_MAP[iconName] || ICON_MAP['AIIcon'];
+                    return { title, description, link, icon: <IconComponent /> };
+                });
+                
+                setMenuItems(items);
+                setUsingFallback(false);
+            } catch (err) {
+                console.error("Connection Diagnosis:", err);
+
+                // --- Diagnostic: Try to fetch spreadsheet metadata to find real sheet names ---
+                let availableTabs = null;
+                // If it's a bad request (400) or valid permission but range error
+                if (err.status === 400 || (err.status !== 403 && err.status !== 404)) {
+                     try {
+                        const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}?key=${GOOGLE_API_KEY}`;
+                        const metaRes = await fetch(metaUrl);
+                        if (metaRes.ok) {
+                            const metaData = await metaRes.json();
+                            availableTabs = metaData.sheets.map(s => s.properties.title);
+                        }
+                     } catch (e) { console.log("Meta fetch failed", e); }
+                }
+                
+                // --- Fallback data ---
+                const fallbackItems = DEFAULT_MENU_ITEMS_DATA.map(item => ({
+                    ...item,
+                    icon: ICON_MAP[item.iconName] ? React.createElement(ICON_MAP[item.iconName]) : <AIIcon />
+                }));
+                setMenuItems(fallbackItems);
+                setUsingFallback(true);
+
+                // --- Advanced Error Analysis ---
+                let userMsg = err.message || '알 수 없는 오류';
+                let errorType = 'general';
+                let projectNumber = null;
+
+                // Convert entire error object to string for keyword search (case-insensitive)
+                const errStr = (JSON.stringify(err) + (err.message || '')).toLowerCase();
+
+                // Case 1: API Not Enabled
+                if (errStr.includes('enable') || (err.status === 403 && errStr.includes('access not configured'))) {
+                    errorType = 'not_enabled';
+                    // Improved regex to capture "project 12345" or "project '12345'"
+                    const match = (err.message || '').match(/project\D+?(\d+)/i);
+                    if (match) projectNumber = match[1];
+                } 
+                // Case 2: Invalid Key
+                else if (errStr.includes('key invalid') || errStr.includes('api key not valid')) {
+                    errorType = 'invalid_key';
+                } 
+                // Case 3: Permission Denied (Sheet is Private vs IP/Referrer Block)
+                else if (err.status === 403) {
+                     if (errStr.includes('referer') || errStr.includes('ip address') || errStr.includes('requests from this')) {
+                         errorType = 'key_restriction';
+                     } else {
+                         errorType = 'permission_denied'; // Likely sheet private
+                     }
+                } 
+                // Case 4: Invalid Range / Sheet Name
+                else if (err.status === 400 && (errStr.includes('range') || errStr.includes('parse') || errStr.includes('unable to parse'))) {
+                    errorType = 'invalid_range'; 
+                }
+                // Case 5: Not Found
+                else if (err.status === 404) {
+                    errorType = 'not_found';
+                }
+                
+                setError({ message: userMsg, type: errorType, projectNumber, raw: err, availableTabs });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        useEffect(() => {
+            fetchMenuItems();
+        }, []);
 
         const filteredMenuItems = useMemo(() => {
-          if (!searchTerm) {
-            return menuItems;
-          }
+          if (!searchTerm) return menuItems;
           return menuItems.filter(
             (item) =>
               item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
               item.description.toLowerCase().includes(searchTerm.toLowerCase())
           );
-        }, [searchTerm]);
+        }, [searchTerm, menuItems]);
+
+        // --- Diagnostic Error Display ---
+        const ErrorDisplay = ({ error }) => {
+            if (!error) return null;
+
+            let title = "연결 오류";
+            let content = null;
+            let colorClass = "bg-slate-800 border-slate-700 text-slate-300";
+            let icon = (
+                <svg className="h-6 w-6 mr-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            );
+
+            // --- Render different advice based on error type ---
+            if (error.type === 'not_enabled') {
+                colorClass = "bg-yellow-900/20 border-yellow-800/50 text-yellow-100";
+                title = "⚠️ Google Sheets API 미설정";
+                content = (
+                    <div className="space-y-4">
+                         <div className="bg-black/30 p-4 rounded border border-yellow-700/30">
+                            <p className="font-bold text-yellow-400 text-lg mb-2">해결 방법:</p>
+                            <p className="mb-3 text-sm">
+                                설정하신 API Key는 아래 프로젝트 번호에 속해 있습니다.<br/>
+                                하지만 현재 Google Cloud Console에서 보고 계신 프로젝트가 다를 수 있습니다.
+                            </p>
+                            {error.projectNumber ? (
+                                <div className="p-4 bg-slate-900 rounded border border-slate-600 flex flex-col gap-2">
+                                    <span className="text-slate-400 text-xs uppercase tracking-wider">API Key's Project Number</span>
+                                    <span className="text-3xl font-mono font-bold text-yellow-300 tracking-widest select-all cursor-text">{error.projectNumber}</span>
+                                    <div className="text-xs text-slate-500 mt-1">
+                                        ▲ 위 번호를 Google Cloud Console 상단 <strong>검색창</strong>에 입력하여 프로젝트를 찾으세요.
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-red-400">오류 메시지에서 프로젝트 번호를 추출하지 못했습니다. 상세 정보를 확인하세요.</p>
+                            )}
+                         </div>
+                         <div className="text-sm text-slate-400">
+                            프로젝트를 찾은 후: <strong>API 및 서비스 > 라이브러리 > Google Sheets API</strong>를 찾아 '사용' 버튼을 누르세요.
+                         </div>
+                    </div>
+                );
+            } else if (error.type === 'invalid_range') {
+                colorClass = "bg-orange-900/20 border-orange-800/50 text-orange-100";
+                title = "❌ 시트 탭(Tab) 이름 오류";
+                content = (
+                    <div className="space-y-3">
+                        <p>
+                            스프레드시트 파일은 찾았으나, 요청한 탭 <strong>'{SHEET_RANGE}'</strong>를 찾을 수 없습니다.
+                        </p>
+                        {error.availableTabs && error.availableTabs.length > 0 ? (
+                            <div className="bg-black/30 p-3 rounded border border-orange-700/30">
+                                <p className="font-bold text-orange-300 mb-1">실제 사용 가능한 탭 목록:</p>
+                                <ul className="list-disc list-inside text-sm space-y-1 text-white">
+                                    {error.availableTabs.map(tab => (
+                                        <li key={tab}>
+                                            {tab} {tab === 'Tax_Hub' ? '(이름은 같지만 공백/대소문자가 다를 수 있음)' : ''}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <p className="mt-2 text-xs text-slate-400">
+                                    코드의 <code>SHEET_RANGE</code>를 위 목록 중 하나로 변경하세요.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="bg-black/30 p-3 rounded border border-orange-700/30">
+                                <p className="font-bold text-orange-300 mb-1">확인사항:</p>
+                                <p className="text-sm">
+                                    구글 시트 <strong>하단</strong>의 탭 이름이 정확히 <code>Tax_Hub</code>인지 확인하세요.<br/>
+                                    (파일명이 아닙니다. 탭 이름입니다.)
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                );
+            } else if (error.type === 'permission_denied') {
+                colorClass = "bg-blue-900/20 border-blue-800/50 text-blue-100";
+                title = "🔒 파일 권한 부족 (매우 중요)";
+                content = (
+                    <div className="space-y-3">
+                        <p>시트가 정상이어도 <strong>API Key</strong>만으로는 비공개 파일을 읽을 수 없습니다.</p>
+                        <div className="bg-black/30 p-3 rounded border border-blue-700/30">
+                            <p className="font-bold text-blue-300 mb-1">해결 방법 (필수):</p>
+                            <ol className="list-decimal list-inside text-sm space-y-2">
+                                <li>스프레드시트 우측 상단 <strong>[공유]</strong> 버튼 클릭</li>
+                                <li>'일반 액세스'가 '제한됨'으로 되어 있으면 API가 차단됩니다.</li>
+                                <li>반드시 <strong>[링크가 있는 모든 사용자]</strong>로 변경하세요.</li>
+                                <li>권한은 <strong>[뷰어]</strong>면 충분합니다.</li>
+                            </ol>
+                        </div>
+                    </div>
+                );
+            } else if (error.type === 'key_restriction') {
+                colorClass = "bg-red-900/20 border-red-800/50 text-red-100";
+                title = "🚫 API Key 제한 (HTTP Referrer/IP)";
+                content = (
+                    <div className="space-y-3">
+                        <p>API Key 설정에서 <strong>웹사이트 제한</strong>이나 <strong>IP 제한</strong>이 걸려 있어 차단되었습니다.</p>
+                        <p className="text-sm bg-black/30 p-2 rounded">
+                            테스트 중에는 키 제한을 <strong>'없음(None)'</strong>으로 설정해보세요.
+                        </p>
+                    </div>
+                );
+            } else {
+                content = <p>{error.message}</p>;
+            }
+
+            return (
+                <div className={`mb-8 max-w-4xl mx-auto p-6 rounded-lg border ${colorClass} relative overflow-hidden`}>
+                    <div className="flex items-start mb-4">
+                        {icon}
+                        <h3 className="font-bold text-lg">{title}</h3>
+                    </div>
+                    
+                    <div className="mb-4 pl-9">
+                        {content}
+                    </div>
+
+                    <div className="pl-9 flex flex-wrap gap-3 items-center">
+                         <button 
+                            onClick={fetchMenuItems}
+                            className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition shadow-md"
+                        >
+                            설정 확인 후 재시도
+                        </button>
+                        
+                        <button
+                            onClick={() => setShowRawError(!showRawError)}
+                            className="text-xs text-slate-400 hover:text-slate-200 underline"
+                        >
+                            {showRawError ? '상세 기술 정보 숨기기' : '상세 기술 정보(Raw Error) 보기'}
+                        </button>
+                    </div>
+
+                    {showRawError && (
+                        <div className="mt-4 p-4 bg-black/50 rounded text-xs font-mono text-green-400 overflow-auto max-h-64 whitespace-pre-wrap border border-slate-700">
+                            <strong>Status:</strong> {error.raw?.status || 'N/A'}<br/>
+                            <strong>Details:</strong> {error.raw?.message || 'N/A'}<br/>
+                            <strong>Full Error:</strong><br/>
+                            {JSON.stringify(error.raw, null, 2)}
+                        </div>
+                    )}
+                </div>
+            );
+        };
 
         return (
           <div className="min-h-screen bg-slate-900 font-sans">
@@ -233,8 +485,9 @@
               <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
                 <div className="max-w-xl mx-auto">
                   <div className="relative">
+                     {/* Search Input */}
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
                       </svg>
                     </div>
@@ -258,18 +511,33 @@
                   <p className="mt-4 text-lg text-slate-300">
                     Tax AI 및 Forensics를 위한 허브입니다. 한 곳에서 모든 모듈에 접근할 수 있습니다.
                   </p>
+                  {usingFallback && !loading && (
+                      <span className="inline-block mt-2 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs border border-slate-700">
+                          ⚠️ 오프라인/데모 데이터 모드
+                      </span>
+                  )}
                 </div>
 
-              {filteredMenuItems.length > 0 ? (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {filteredMenuItems.map((item) => (
-                    <MenuCard key={item.title} {...item} />
-                  ))}
-                </div>
+              {loading ? (
+                 <div className="flex justify-center mt-16">
+                    <div className="text-slate-400 text-lg animate-pulse">데이터 연결 확인 중...</div>
+                 </div>
               ) : (
-                <div className="mt-16 text-center">
-                  <p className="text-slate-400 text-lg">검색과 일치하는 모듈을 찾을 수 없습니다.</p>
-                </div>
+                <>
+                    <ErrorDisplay error={error} />
+
+                    {filteredMenuItems.length > 0 ? (
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {filteredMenuItems.map((item, index) => (
+                            <MenuCard key={index} {...item} />
+                        ))}
+                        </div>
+                    ) : (
+                        <div className="mt-16 text-center">
+                            <p className="text-slate-400 text-lg">검색 결과가 없습니다.</p>
+                        </div>
+                    )}
+                </>
               )}
             </main>
           </div>
@@ -291,9 +559,3 @@
     </script>
   </body>
 </html>
-
-
-
-
-
-
