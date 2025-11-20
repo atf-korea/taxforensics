@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
   <head>
@@ -242,9 +241,20 @@
                     const description = row[1] || '';
                     const link = row[2] || '';
                     const iconName = row[3] || 'AIIcon';
+                    
+                    // Column E (Index 4) for sorting
+                    // If empty or undefined, give it a high number to put it at the end
+                    const sortRaw = row[4];
+                    const sortOrder = (sortRaw !== undefined && sortRaw !== '' && !isNaN(sortRaw)) 
+                                      ? Number(sortRaw) 
+                                      : 9999;
+
                     const IconComponent = ICON_MAP[iconName] || ICON_MAP['AIIcon'];
-                    return { title, description, link, icon: <IconComponent /> };
+                    return { title, description, link, icon: <IconComponent />, sortOrder };
                 });
+                
+                // Sort items based on sortOrder (Ascending)
+                items.sort((a, b) => a.sortOrder - b.sortOrder);
                 
                 setMenuItems(items);
                 setUsingFallback(false);
@@ -555,4 +565,3 @@
     </script>
   </body>
 </html>
-
