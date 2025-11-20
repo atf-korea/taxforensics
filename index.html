@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tax AI & Tax Forensics Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="config.js"></script>
+    <script src="config.js"></script>    
     <script type="importmap">
       {
         "imports": {
@@ -245,7 +245,7 @@
                     // Column E (Index 4) for sorting
                     // If empty or undefined, give it a high number to put it at the end
                     const sortRaw = row[4];
-                    const sortOrder = (sortRaw !== undefined && sortRaw !== '' && !isNaN(sortRaw)) 
+                    const sortOrder = (sortRaw !== undefined && sortRaw !== '' && !isNaN(Number(sortRaw))) 
                                       ? Number(sortRaw) 
                                       : 9999;
 
@@ -253,8 +253,13 @@
                     return { title, description, link, icon: <IconComponent />, sortOrder };
                 });
                 
-                // Sort items based on sortOrder (Ascending)
-                items.sort((a, b) => a.sortOrder - b.sortOrder);
+                // Sort items based on sortOrder (Ascending), then by Title for stability
+                items.sort((a, b) => {
+                    if (a.sortOrder !== b.sortOrder) {
+                        return a.sortOrder - b.sortOrder;
+                    }
+                    return a.title.localeCompare(b.title);
+                });
                 
                 setMenuItems(items);
                 setUsingFallback(false);
