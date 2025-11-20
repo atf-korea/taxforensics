@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tax AI & Tax Forensics Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="config.js"></script>
     <script type="importmap">
       {
         "imports": {
@@ -23,11 +24,6 @@
     <script type="text/babel" data-type="module">
       import React, { useState, useEffect, useMemo } from 'react';
       import ReactDOM from 'react-dom/client';
-
-      // --- Google Sheets API Configuration ---
-      const GOOGLE_API_KEY = 'AIzaSyBS1kIHPn1j2iCL4npiitSo_6Sm0M42450';
-      const GOOGLE_SHEET_ID = '1CtvvJmwuEw1LA9GjGe1RncKMTdECQxwU-CVFkj122iA';
-      const SHEET_RANGE = 'Tax_Hub!A1:D'; 
 
       // --- Icon Components ---
       const DocumentSearchIcon = () => (
@@ -559,3 +555,4 @@
     </script>
   </body>
 </html>
+
