@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Sites</title>
+    <title>SPK Sites Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="config_spk.js"></script>
+    <script src="config.js"></script>    
     <script type="importmap">
       {
         "imports": {
@@ -22,7 +22,6 @@
     <script type="text/babel" data-type="module">
       import React, { useState, useEffect, useMemo } from 'react';
       import ReactDOM from 'react-dom/client';
-
 
       // --- Icon Components ---
       const DocumentSearchIcon = () => (
@@ -178,7 +177,7 @@
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-700 text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
                 {icon}
               </div>
-              <h3 className="ml-3 text-base font-bold text-white leading-tight">{title}</h3>
+              <h3 className="ml-3 text-lg font-bold text-white leading-tight">{title}</h3>
             </div>
             <p className="text-base text-slate-400 leading-relaxed line-clamp-2">{description}</p>
             <div className="absolute top-1 right-1 p-2 text-slate-600 opacity-0 transition-opacity group-hover:opacity-100">
@@ -250,10 +249,15 @@
                     const sortOrder = (sortRaw !== undefined && sortRaw !== '' && !isNaN(Number(sortRaw))) 
                                       ? Number(sortRaw) 
                                       : 9999;
+                    
+                    // Column F (Index 5) for visibility
+                    // '1' means visible, anything else is hidden
+                    const visibilityRaw = row[6];
+                    const isVisible = String(visibilityRaw).trim() === '1';
 
                     const IconComponent = ICON_MAP[iconName] || ICON_MAP['AIIcon'];
-                    return { title, description, link, icon: <IconComponent />, sortOrder };
-                });
+                    return { title, description, link, icon: <IconComponent />, sortOrder, isVisible };
+                }).filter(item => item.isVisible); // Filter out hidden items
                 
                 // Sort items based on sortOrder (Ascending), then by Title for stability
                 items.sort((a, b) => {
@@ -401,7 +405,7 @@
                                 <ul className="list-disc list-inside text-sm space-y-1 text-white">
                                     {error.availableTabs.map(tab => (
                                         <li key={tab}>
-                                            {tab} {tab === 'Tax_Hub' ? '(이름은 같지만 공백/대소문자가 다를 수 있음)' : ''}
+                                            {tab} {tab === 'SPK_Site' ? '(이름은 같지만 공백/대소문자가 다를 수 있음)' : ''}
                                         </li>
                                     ))}
                                 </ul>
@@ -413,7 +417,7 @@
                             <div className="bg-black/30 p-3 rounded border border-orange-700/30">
                                 <p className="font-bold text-orange-300 mb-1">확인사항:</p>
                                 <p className="text-sm">
-                                    구글 시트 <strong>하단</strong>의 탭 이름이 정확히 <code>Tax_Hub</code>인지 확인하세요.<br/>
+                                    구글 시트 <strong>하단</strong>의 탭 이름이 정확히 <code>SPK_Site</code>인지 확인하세요.<br/>
                                     (파일명이 아닙니다. 탭 이름입니다.)
                                 </p>
                             </div>
@@ -518,11 +522,11 @@
 
             <main className="container mx-auto px-4 pb-8 sm:px-6 lg:px-8">
                <div className="max-w-3xl mx-auto text-center pt-8 pb-6">
-                  <h2 className="text-2xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
                     My Sites Hub
                   </h2>
                   <p className="mt-4 text-lg text-slate-300">
-                    나의 인터넷 허브입니다. 한 곳에서 모든 모듈에 접근할 수 있습니다.
+                    한 곳에서 모든 모듈에 접근할 수 있습니다.
                   </p>
                   {usingFallback && !loading && (
                       <span className="inline-block mt-2 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs border border-slate-700">
