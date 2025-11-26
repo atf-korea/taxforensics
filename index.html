@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tax AI & Tax Forensics Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="config.js"></script>
+    <script src="config.js"></script>    
     <script type="importmap">
       {
         "imports": {
@@ -171,15 +171,15 @@
         return (
           <Tag
             {...props}
-            className="group relative block rounded-xl border border-slate-800 bg-slate-800/50 p-5 shadow-lg transition-all duration-300 ease-in-out hover:border-blue-500/50 hover:shadow-blue-500/20 hover:-translate-y-1 cursor-pointer"
+            className="group relative block rounded-xl border border-slate-800 bg-slate-800/50 p-4 shadow-lg transition-all duration-300 ease-in-out hover:border-blue-500/50 hover:shadow-blue-500/20 hover:-translate-y-1 cursor-pointer"
           >
-            <div className="flex items-center mb-2">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-700 text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+            <div className="flex items-center mb-1">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-700 text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
                 {icon}
               </div>
               <h3 className="ml-3 text-lg font-bold text-white leading-tight">{title}</h3>
             </div>
-            <p className="text-sm text-slate-400 leading-relaxed line-clamp-2">{description}</p>
+            <p className="text-base text-slate-400 leading-relaxed line-clamp-2">{description}</p>
             <div className="absolute top-1 right-1 p-2 text-slate-600 opacity-0 transition-opacity group-hover:opacity-100">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -249,10 +249,15 @@
                     const sortOrder = (sortRaw !== undefined && sortRaw !== '' && !isNaN(Number(sortRaw))) 
                                       ? Number(sortRaw) 
                                       : 9999;
+                    
+                    // Column F (Index 5) for visibility
+                    // '1' means visible, anything else is hidden
+                    const visibilityRaw = row[5];
+                    const isVisible = String(visibilityRaw).trim() === '1';
 
                     const IconComponent = ICON_MAP[iconName] || ICON_MAP['AIIcon'];
-                    return { title, description, link, icon: <IconComponent />, sortOrder };
-                });
+                    return { title, description, link, icon: <IconComponent />, sortOrder, isVisible };
+                }).filter(item => item.isVisible); // Filter out hidden items
                 
                 // Sort items based on sortOrder (Ascending), then by Title for stability
                 items.sort((a, b) => {
@@ -517,11 +522,11 @@
 
             <main className="container mx-auto px-4 pb-8 sm:px-6 lg:px-8">
                <div className="max-w-3xl mx-auto text-center pt-8 pb-6">
-                  <h2 className="text-2xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
                     Tax AI & Forensics Hub
                   </h2>
                   <p className="mt-4 text-lg text-slate-300">
-                    한 곳에서 모든 모듈에 접근할 수 있습니다.
+                    Tax AI 및 Forensics를 위한 허브입니다. 한 곳에서 모든 모듈에 접근할 수 있습니다.
                   </p>
                   {usingFallback && !loading && (
                       <span className="inline-block mt-2 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs border border-slate-700">
@@ -571,7 +576,3 @@
     </script>
   </body>
 </html>
-
-
-
-
