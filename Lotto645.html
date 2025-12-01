@@ -1,0 +1,504 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지능형 로또 번호 생성기 2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1a202c; /* slate-900 */
+        }
+        /* Mobile First: 기본 로또 공 스타일 */
+        .lotto-ball {
+            width: 2rem; /* 32px */
+            height: 2rem;
+            font-size: 0.875rem; /* 14px */
+            border-radius: 50%;
+            display: flex;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            box-shadow: inset -3px -3px 5px rgba(0,0,0,0.4), 0px 2px 3px rgba(0,0,0,0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        /* sm (640px) 이상일 때 로또 공 스타일 */
+        @media (min-width: 640px) {
+            .lotto-ball {
+                width: 3.25rem;
+                height: 3.25rem;
+                font-size: 1.25rem;
+            }
+        }
+        .ball-yellow { background: radial-gradient(circle at 33% 33%, #ffd95a, #facc15); }
+        .ball-blue { background: radial-gradient(circle at 33% 33%, #89cff0, #60a5fa); }
+        .ball-red { background: radial-gradient(circle at 33% 33%, #ff8a8a, #f87171); }
+        .ball-gray { background: radial-gradient(circle at 33% 33%, #b0b0b0, #9ca3af); }
+        .ball-green { background: radial-gradient(circle at 33% 33%, #77dd77, #4ade80); }
+
+        .tab-btn {
+            transition: all 0.3s ease-in-out;
+            border: 2px solid #374151; /* gray-700 */
+            background-color: #1f2937; /* gray-800 */
+            color: #d1d5db; /* gray-300 */
+        }
+        .tab-btn.active {
+            background-image: linear-gradient(to right, #2563eb, #3b82f6);
+            color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        .skeleton {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            50% { opacity: .5; }
+        }
+        .result-item {
+            animation: fadeIn 0.5s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .nav-btn {
+            color: rgba(255, 255, 255, 0.4);
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-btn:hover:not(:disabled) {
+            color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(0,0,0,0.3);
+        }
+        .nav-btn:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto bg-[#2d3748] rounded-2xl shadow-2xl shadow-blue-500/10 p-4 sm:p-8 text-gray-200">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">Lotto AI Generator</h1>
+            <p class="text-sm text-gray-400 mt-2">데이터가 찾아주는 최적의 조합</p>
+        </header>
+
+        <main>
+            <!-- 최신 당첨 정보 -->
+            <div class="mb-8 relative">
+                <div id="latest-draw-container" class="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                    <div id="latest-draw-info" class="flex-grow">
+                        <!-- Skeleton UI -->
+                        <div class="skeleton">
+                            <h2 class="font-bold text-center text-gray-300 mb-3 h-6 bg-gray-700 rounded w-3/4 mx-auto"></h2>
+                            <div class="flex justify-center items-center gap-1 sm:gap-2 mb-2">
+                                <div class="lotto-ball bg-gray-700"></div><div class="lotto-ball bg-gray-700"></div><div class="lotto-ball bg-gray-700"></div>
+                                <div class="lotto-ball bg-gray-700"></div><div class="lotto-ball bg-gray-700"></div><div class="lotto-ball bg-gray-700"></div>
+                                <span class="text-xl sm:text-2xl font-light text-gray-600 mx-1 sm:mx-1">+</span>
+                                <div class="lotto-ball bg-gray-700"></div>
+                            </div>
+                            <p class="text-sm text-center h-5 bg-gray-700 rounded w-5/6 mx-auto mb-2"></p>
+                            <p class="text-xs text-center h-4 bg-gray-700 rounded w-full mx-auto"></p>
+                        </div>
+                    </div>
+                </div>
+                <button id="prev-draw-btn" class="nav-btn absolute top-1/2 -translate-y-1/2 left-1 p-2 rounded-full bg-gray-900/20 backdrop-blur-sm">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <button id="next-draw-btn" class="nav-btn absolute top-1/2 -translate-y-1/2 right-1 p-2 rounded-full bg-gray-900/20 backdrop-blur-sm">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+            <!-- 생성 모드 선택 -->
+            <div class="mb-8">
+                <label class="block text-sm font-medium text-gray-300 mb-3">1. 생성 모드 선택</label>
+                <div id="mode-selector" class="grid grid-cols-3 gap-3">
+                    <div class="text-center">
+                        <button data-mode="balanced" class="tab-btn active font-semibold py-2.5 rounded-lg text-sm w-full">📈 균형 우선</button>
+                        <p class="text-xs text-gray-500 mt-2 px-1">모든 통계 필터를 조화롭게 적용하여 안정적인 조합을 생성합니다.</p>
+                    </div>
+                    <div class="text-center">
+                        <button data-mode="hot" class="tab-btn font-semibold py-2.5 rounded-lg text-sm w-full">🔥 핫 넘버</button>
+                        <p class="text-xs text-gray-500 mt-2 px-1">최근 출현 빈도가 높은 번호를 우선 포함하여 조합합니다.</p>
+                    </div>
+                    <div class="text-center">
+                        <button data-mode="cold" class="tab-btn font-semibold py-2.5 rounded-lg text-sm w-full">🧊 콜드 넘버</button>
+                        <p class="text-xs text-gray-500 mt-2 px-1">오랫동안 미출현한 번호의 반등을 기대하며 조합합니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 고급 설정 -->
+            <div class="mb-8">
+                <label class="block text-sm font-medium text-gray-300 mb-3">2. 고급 설정 (선택 사항)</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <input type="text" id="include-numbers" placeholder="포함할 번호 (예: 7, 14)" class="w-full bg-gray-800 px-3 py-2 border border-gray-600 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500">
+                    </div>
+                    <div>
+                        <input type="text" id="exclude-numbers" placeholder="제외할 번호 (예: 1, 9)" class="w-full bg-gray-800 px-3 py-2 border border-gray-600 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 생성 버튼 -->
+            <button id="generate-btn" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-lg hover:from-blue-500 hover:to-indigo-500 transition-all text-lg shadow-lg shadow-blue-500/20 flex items-center justify-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                AI 번호 생성하기
+            </button>
+            
+            <!-- 결과 표시 영역 -->
+            <div id="results-area" class="mt-8 space-y-4"></div>
+            <div id="error-message" class="mt-4 text-center text-red-400 font-semibold hidden"></div>
+        </main>
+        
+        <footer class="text-center mt-10 pt-6 border-t border-gray-700">
+            <p class="text-xs text-gray-500">
+                copyright © 2025 by 곽가이버 All rights reserved<br>
+                (관련 문의 : akfn011@naver.com)
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const config = {
+            carryOverNumbers: [6, 12, 18, 37, 40, 41, 3], // 1180회차 데이터로 폴백
+            hotNumbers: [34, 12, 27, 13, 33, 17, 43, 3, 7, 6],
+            coldNumbers: [9, 22, 23, 25, 28, 29, 32, 41, 5, 8],
+            maxTries: 20000
+        };
+        let currentMode = 'balanced';
+        let latestDrwNo = null;
+        let currentDrwNo = null;
+
+        const latestDrawInfoDiv = document.getElementById('latest-draw-info');
+        const prevBtn = document.getElementById('prev-draw-btn');
+        const nextBtn = document.getElementById('next-draw-btn');
+        const modeSelector = document.getElementById('mode-selector');
+        const generateBtn = document.getElementById('generate-btn');
+        const resultsArea = document.getElementById('results-area');
+        const includeInput = document.getElementById('include-numbers');
+        const excludeInput = document.getElementById('exclude-numbers');
+        const errorMessageDiv = document.getElementById('error-message');
+
+        const SKELETON_HTML = `
+            <div class="skeleton">
+                <h2 class="font-bold text-center text-gray-300 mb-3 h-6 bg-gray-700 rounded w-3/4 mx-auto"></h2>
+                <div class="flex justify-center items-center gap-1 sm:gap-2 mb-2">
+                    <div class="lotto-ball bg-gray-700"></div><div class="lotto-ball bg-gray-700"></div><div class="lotto-ball bg-gray-700"></div>
+                    <div class="lotto-ball bg-gray-700"></div><div class="lotto-ball bg-gray-700"></div><div class="lotto-ball bg-gray-700"></div>
+                    <span class="text-xl sm:text-2xl font-light text-gray-600 mx-1 sm:mx-1">+</span>
+                    <div class="lotto-ball bg-gray-700"></div>
+                </div>
+                <p class="text-sm text-center h-5 bg-gray-700 rounded w-5/6 mx-auto mb-2"></p>
+                <p class="text-xs text-center h-4 bg-gray-700 rounded w-full mx-auto"></p>
+            </div>`;
+
+        async function fetchAndDisplayDraw(drawNumber) {
+            latestDrawInfoDiv.innerHTML = SKELETON_HTML;
+            updateNavButtons();
+            
+            const lottoData = await attemptFetch(drawNumber);
+
+            if (lottoData && lottoData.returnValue === 'success') {
+                updateLatestDrawUI(lottoData);
+                currentDrwNo = drawNumber;
+            } else {
+                displayFallbackDrawUI(drawNumber);
+            }
+            updateNavButtons();
+        }
+
+        async function init() {
+            const firstDrawDate = new Date('2002-12-07T21:00:00+09:00');
+            const now = new Date();
+            const diff = now - firstDrawDate;
+            const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+            let drwNo = weeks + 1;
+            
+            let lottoData = await attemptFetch(drwNo);
+
+            if (!lottoData || lottoData.returnValue === 'fail') {
+                drwNo--;
+                lottoData = await attemptFetch(drwNo);
+            }
+
+            if (lottoData && lottoData.returnValue === 'success') {
+                latestDrwNo = lottoData.drwNo;
+                currentDrwNo = lottoData.drwNo;
+                updateLatestDrawUI(lottoData);
+                config.carryOverNumbers = [
+                    lottoData.drwtNo1, lottoData.drwtNo2, lottoData.drwtNo3,
+                    lottoData.drwtNo4, lottoData.drwtNo5, lottoData.drwtNo6,
+                    lottoData.bnusNo
+                ];
+            } else {
+                console.error("최신 로또 정보 로딩에 최종적으로 실패했습니다.");
+                displayFallbackDrawUI(1180);
+                latestDrwNo = 1180;
+                currentDrwNo = 1180;
+            }
+            updateNavButtons();
+        }
+
+        async function attemptFetch(drawNumber) {
+            const url = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${drawNumber}`;
+            const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+                `https://thingproxy.freeboard.io/fetch/${url}`
+            ];
+
+            for (const proxyUrl of proxies) {
+                try {
+                    const response = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' } });
+                    if (response.ok) {
+                        const data = await response.json();
+                        const parsedData = data.contents ? JSON.parse(data.contents) : data;
+                        if (parsedData && (parsedData.returnValue === 'success' || parsedData.returnValue === 'fail')) {
+                            return parsedData;
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`Proxy for draw ${drawNumber} failed:`, e);
+                }
+            }
+            return null;
+        }
+        
+        function displayFallbackDrawUI(drawNumber) {
+            const fallbackDrwNo = drawNumber || "1180"; 
+            const numbers = config.carryOverNumbers.slice(0, 6);
+            const bnusNo = config.carryOverNumbers[6];
+            const analysisText = generateAnalysisText(numbers);
+
+            const ballsHtml = numbers.map(n => `<div class="lotto-ball ${getBallColor(n)}">${n}</div>`).join('');
+            const bonusBallHtml = `<div class="lotto-ball ${getBallColor(bnusNo)}">${bnusNo}</div>`;
+            
+            latestDrawInfoDiv.innerHTML = `
+                <h2 class="font-bold text-center text-gray-300 mb-3 text-sm sm:text-base">당첨 정보 (${fallbackDrwNo}회)</h2>
+                <div class="flex justify-center items-center gap-1 sm:gap-2 mb-2">
+                    ${ballsHtml}
+                    <span class="text-xl sm:text-2xl font-light text-gray-600 mx-1 sm:mx-1">+</span>
+                    ${bonusBallHtml}
+                </div>
+                <p class="text-center text-xs text-red-400 mt-2">정보 로딩에 실패하여 저장된 데이터로 표시됩니다.</p>
+                <p class="text-xs text-gray-400 text-center mt-2">${analysisText}</p>
+            `;
+        }
+
+
+        function updateLatestDrawUI(data) {
+            const { drwNo, drwNoDate, drwtNo1, drwtNo2, drwtNo3, drwtNo4, drwtNo5, drwtNo6, bnusNo, firstWinamnt, firstPrzwnerCo } = data;
+            const numbers = [drwtNo1, drwtNo2, drwtNo3, drwtNo4, drwtNo5, drwtNo6];
+            const analysisText = generateAnalysisText(numbers);
+
+            const ballsHtml = numbers.map(n => `<div class="lotto-ball ${getBallColor(n)}">${n}</div>`).join('');
+            const bonusBallHtml = `<div class="lotto-ball ${getBallColor(bnusNo)}">${bnusNo}</div>`;
+            latestDrawInfoDiv.innerHTML = `
+                <h2 class="font-bold text-center text-gray-300 mb-3 text-sm sm:text-base">당첨 정보 (${drwNo}회 - ${drwNoDate})</h2>
+                <div class="flex justify-center items-center gap-1 sm:gap-2 mb-2">
+                    ${ballsHtml}
+                    <span class="text-xl sm:text-2xl font-light text-gray-600 mx-1 sm:mx-1">+</span>
+                    ${bonusBallHtml}
+                </div>
+                <p class="text-xs sm:text-sm text-gray-400 text-center">
+                    <span class="font-semibold text-gray-300">1등:</span> 약 ${(firstWinamnt / 100000000).toFixed(1)}억 원 (${firstPrzwnerCo}명)
+                </p>
+                <p class="text-xs text-gray-400 text-center mt-2">${analysisText}</p>
+            `;
+        }
+
+        function updateNavButtons() {
+            prevBtn.disabled = currentDrwNo <= 1;
+            nextBtn.disabled = currentDrwNo >= latestDrwNo;
+        }
+
+        function generateAnalysisText(numbers) {
+            const analysisParts = [];
+            const sorted = [...numbers].sort((a,b) => a-b);
+            
+            const hotCount = sorted.filter(n => config.hotNumbers.includes(n)).length;
+            const coldCount = sorted.filter(n => config.coldNumbers.includes(n)).length;
+            const consecutive = sorted.some((n, i) => i > 0 && n === sorted[i-1] + 1);
+
+            if (hotCount > 0) analysisParts.push(`핫 ${hotCount}개`);
+            if (coldCount > 0) analysisParts.push(`콜드 ${coldCount}개`);
+            if (consecutive) analysisParts.push('연속번호');
+
+            if (analysisParts.length > 0) {
+                return `분석: ${analysisParts.join(', ')} 포함된 조합`;
+            }
+            return "분석: 전반적으로 균형잡힌 조합";
+        }
+        
+        document.addEventListener('DOMContentLoaded', init);
+
+        prevBtn.addEventListener('click', () => {
+            if (currentDrwNo > 1) {
+                currentDrwNo--;
+                fetchAndDisplayDraw(currentDrwNo);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentDrwNo < latestDrwNo) {
+                currentDrwNo++;
+                fetchAndDisplayDraw(currentDrwNo);
+            }
+        });
+
+        modeSelector.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (button) {
+                document.querySelectorAll('#mode-selector button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentMode = button.dataset.mode;
+            }
+        });
+
+        generateBtn.addEventListener('click', () => {
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>생성 중...`;
+            resultsArea.innerHTML = '';
+            errorMessageDiv.classList.add('hidden');
+
+            setTimeout(() => {
+                try {
+                    const sets = generate5Sets();
+                    displayResults(sets);
+                } catch (error) {
+                    errorMessageDiv.textContent = error.message;
+                    errorMessageDiv.classList.remove('hidden');
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.innerHTML = `<svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>AI 번호 생성하기`;
+                }
+            }, 10);
+        });
+
+        function generate5Sets() {
+            const sets = [];
+            for (let i = 0; i < 5; i++) {
+                sets.push(generateSingleValidSet());
+            }
+            return sets;
+        }
+
+        function generateSingleValidSet() {
+            const { include, exclude } = parseAdvancedSettings();
+            for (let i = 0; i < config.maxTries; i++) {
+                const basePool = Array.from({ length: 45 }, (_, i) => i + 1).filter(n => !exclude.includes(n) && !include.includes(n));
+                let tempSet = [...include];
+                const modePool = basePool.filter(n => !tempSet.includes(n));
+                if (currentMode === 'hot' && modePool.length > 0) {
+                    const hotCandidates = config.hotNumbers.filter(n => modePool.includes(n));
+                    if (hotCandidates.length > 0) tempSet.push(hotCandidates[Math.floor(Math.random() * hotCandidates.length)]);
+                } else if (currentMode === 'cold' && modePool.length > 0) {
+                    const coldCandidates = config.coldNumbers.filter(n => modePool.includes(n));
+                    if (coldCandidates.length > 0) tempSet.push(coldCandidates[Math.floor(Math.random() * coldCandidates.length)]);
+                }
+                const carryOverPool = basePool.filter(n => !tempSet.includes(n));
+                const carryOverCandidates = config.carryOverNumbers.filter(n => carryOverPool.includes(n));
+                if (carryOverCandidates.length > 0) tempSet.push(carryOverCandidates[Math.floor(Math.random() * carryOverCandidates.length)]);
+                let finalPool = basePool.filter(n => !tempSet.includes(n));
+                while(tempSet.length < 6 && finalPool.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * finalPool.length);
+                    tempSet.push(finalPool.splice(randomIndex, 1)[0]);
+                }
+                if (new Set(tempSet).size === 6) {
+                    const analysis = analyzeSet(tempSet);
+                    if (analysis.sum.pass && analysis.oddEven.pass && analysis.highLow.pass && analysis.consecutive.pass && analysis.sameEnd.pass && analysis.carryOver.pass) {
+                        return { numbers: tempSet.sort((a,b) => a - b), analysis };
+                    }
+                }
+            }
+            throw new Error('조건에 맞는 번호를 생성하지 못했습니다. 포함/제외 수를 조정하거나 다시 시도해주세요.');
+        }
+
+        function analyzeSet(numbers) {
+            const sum = numbers.reduce((a, b) => a + b, 0);
+            const oddCount = numbers.filter(n => n % 2 !== 0).length;
+            const highCount = numbers.filter(n => n > 22).length;
+            const sorted = [...numbers].sort((a,b) => a-b);
+            const consecutive = sorted.some((n, i) => i > 0 && n === sorted[i-1] + 1);
+            const endDigits = numbers.map(n => n % 10);
+            const sameEnd = new Set(endDigits).size < 6;
+            const carryOverCount = numbers.filter(n => config.carryOverNumbers.includes(n)).length;
+            return {
+                sum: { pass: sum >= 110 && sum <= 170, value: sum },
+                oddEven: { pass: ['3:3', '4:2', '2:4'].includes(`${oddCount}:${6-oddCount}`), value: `${oddCount}:${6-oddCount}` },
+                highLow: { pass: ['3:3', '4:2', '2:4'].includes(`${6-highCount}:${highCount}`), value: `${6-highCount}:${highCount}` },
+                consecutive: { pass: consecutive, value: consecutive ? '포함' : '미포함' },
+                sameEnd: { pass: sameEnd, value: sameEnd ? '포함' : '미포함' },
+                carryOver: { pass: carryOverCount > 0, value: `${carryOverCount}개` }
+            };
+        }
+
+        function parseAdvancedSettings() {
+            const parse = (str) => str.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 45);
+            const include = Array.from(new Set(parse(includeInput.value))).slice(0, 5);
+            const exclude = Array.from(new Set(parse(excludeInput.value)));
+            return { include, exclude };
+        }
+
+        function displayResults(sets) {
+            resultsArea.innerHTML = '';
+            sets.forEach((set, index) => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'result-item bg-gray-800/50 p-4 rounded-lg border border-gray-700';
+                resultDiv.style.animationDelay = `${index * 100}ms`;
+                let ballsHtml = set.numbers.map(n => `<div class="lotto-ball ${getBallColor(n)}">${n}</div>`).join('');
+                resultDiv.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1 sm:gap-2 flex-grow min-w-0">
+                            <span class="font-bold text-lg text-blue-400 w-6 text-center">${String.fromCharCode(65 + index)}</span>
+                            <div class="flex items-center gap-1 sm:gap-2 flex-nowrap overflow-x-auto">
+                                ${ballsHtml}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 pl-2">
+                            <button class="details-btn text-gray-400 hover:text-white transition-colors" title="상세 분석 보기"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></button>
+                        </div>
+                    </div>
+                    <div class="analysis-details hidden mt-4 pt-4 border-t border-gray-700 text-xs text-gray-400 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        ${createAnalysisHtml(set.analysis)}
+                    </div>
+                `;
+                resultsArea.appendChild(resultDiv);
+            });
+            
+            document.querySelectorAll('.details-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const details = btn.closest('.flex').parentElement.nextElementSibling;
+                    details.classList.toggle('hidden');
+                });
+            });
+        }
+
+        function createAnalysisHtml(analysis) {
+            const createItem = (label, result) => `<div class="flex items-center"><span class="mr-1.5">${result.pass ? '✅' : '❌'}</span><span class="text-gray-300">${label}:</span><span class="ml-auto font-medium text-white">${result.value}</span></div>`;
+            return `${createItem('총합', analysis.sum)}${createItem('홀짝', analysis.oddEven)}${createItem('고저', analysis.highLow)}${createItem('연번', analysis.consecutive)}${createItem('끝수', analysis.sameEnd)}${createItem('이월수', analysis.carryOver)}`;
+        }
+
+        function getBallColor(n) {
+            if (n <= 10) return 'ball-yellow';
+            if (n <= 20) return 'ball-blue';
+            if (n <= 30) return 'ball-red';
+            if (n <= 40) return 'ball-gray';
+            return 'ball-green';
+        }
+    </script>
+</body>
+</html>
+
