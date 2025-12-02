@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Sites  Hub</title>
+    <title>SPK Sites Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="config.js"></script>    
     <script type="importmap">
@@ -148,7 +148,7 @@
                     <path d="M3 21l3.536-3.536" />
                     <path d="M17.464 8.536l3.536 -3.536" />
                   </svg>
-                  <span className="ml-3 text-xl font-bold text-white">My sites Hub</span>
+                  <span className="ml-3 text-xl font-bold text-white">My Sites Hub</span>
                 </div>
                 <div className="flex items-center space-x-4">
                   <button className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition">
@@ -252,7 +252,7 @@
                     
                     // Column F (Index 5) for visibility
                     // '1' means visible, anything else is hidden
-                    const visibilityRaw = row[7];
+                    const visibilityRaw = row[6];
                     const isVisible = String(visibilityRaw).trim() === '1';
 
                     const IconComponent = ICON_MAP[iconName] || ICON_MAP['AIIcon'];
@@ -526,7 +526,7 @@
                     My Sites Hub
                   </h2>
                   <p className="mt-4 text-lg text-slate-300">
-                   한 곳에서 모든 모듈에 접근할 수 있습니다.
+                     한 곳에서 모든 모듈에 접근할 수 있습니다.
                   </p>
                   {usingFallback && !loading && (
                       <span className="inline-block mt-2 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs border border-slate-700">
