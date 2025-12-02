@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CENTRIC TAX AI Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="config.js"></script>    
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client"
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body class="bg-slate-900 text-slate-100">
+    <div id="root"></div>
+    <script type="text/babel" data-type="module">
+      import React, { useState, useEffect, useMemo } from 'react';
+      import ReactDOM from 'react-dom/client';
+
+      // --- Icon Components ---
+      const DocumentSearchIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m5-6h2m-1-2v4m5.707 5.293a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414 0l-4.293-4.293a6.5 6.5 111.414-1.414l4.293 4.293z" />
+        </svg>
+      );
+      const DataAnalysisIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      );
+      const FraudDetectionIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+      const ReportingIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      );
+      const CaseManagementIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      );
+      const AuditTrailIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      );
+      const SettingsIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      );
+      const HelpIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+      const DataCollectionIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10m16-10v10M4 13h16m0-6h-4a2 2 0 00-2 2v0a2 2 0 002 2h4m0 6h-4a2 2 0 01-2-2v0a2 2 0 012-2h4M4 7a2 2 0 012-2h12a2 2 0 012 2M4 17a2 2 0 002 2h12a2 2 0 002-2" />
+        </svg>
+      );
+      const FileListIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      );
+      const SparklesIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.293 2.293a1 1 0 010 1.414L10 16l-4 4-4-4 5.293-5.293a1 1 0 011.414 0L10 10m9 5l-2.293-2.293a1 1 0 00-1.414 0L10 17l4 4 4-4-5.293-5.293a1 1 0 00-1.414 0L10 14" />
+        </svg>
+      );
+      const BookOpenIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      );
+      const FolderDownloadIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      );
+      const AIIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16v4m-2-2h4m3 12v4m-2-2h4M3 12h18m-9-9v18" />
+        </svg>
+      );
+      const AIIcon1 = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      );
+
+      // Map strings from Sheet to Components
+      const ICON_MAP = {
+        'DocumentSearchIcon': DocumentSearchIcon,
+        'DataAnalysisIcon': DataAnalysisIcon,
+        'FraudDetectionIcon': FraudDetectionIcon,
+        'ReportingIcon': ReportingIcon,
+        'CaseManagementIcon': CaseManagementIcon,
+        'AuditTrailIcon': AuditTrailIcon,
+        'SettingsIcon': SettingsIcon,
+        'HelpIcon': HelpIcon,
+        'DataCollectionIcon': DataCollectionIcon,
+        'FileListIcon': FileListIcon,
+        'SparklesIcon': SparklesIcon,
+        'BookOpenIcon': BookOpenIcon,
+        'FolderDownloadIcon': FolderDownloadIcon,
+        'AIIcon': AIIcon,
+        'AIIcon1': AIIcon1
+      };
+
+      // Default Fallback Items (Used when API fails)
+      const DEFAULT_MENU_ITEMS_DATA = [
+        { title: "세무 법령 검색", description: "AI 기반 세법 및 판례 검색", link: "", iconName: "DocumentSearchIcon" },
+        { title: "데이터 분석", description: "납세자 데이터 심층 분석", link: "", iconName: "DataAnalysisIcon" },
+        { title: "탈세 혐의 탐지", description: "이상 거래 및 탈세 혐의점 포착", link: "", iconName: "FraudDetectionIcon" },
+        { title: "조사 보고서", description: "자동화된 조사 결과 보고서 생성", link: "", iconName: "ReportingIcon" },
+        { title: "사건 관리", description: "조사 진행 현황 및 이력 관리", link: "", iconName: "CaseManagementIcon" },
+        { title: "감사 로그", description: "시스템 접근 및 작업 이력", link: "", iconName: "AuditTrailIcon" },
+        { title: "자료 수집", description: "외부 기관 자료 연동 및 수집", link: "", iconName: "DataCollectionIcon" },
+        { title: "설정", description: "사용자 및 시스템 설정", link: "", iconName: "SettingsIcon" }
+      ];
+      
+      // --- UI Components ---
+      const Header = () => {
+        return (
+          <header className="bg-slate-900/50">
+            <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex items-center">
+                  <svg className="h-8 w-8 text-blue-500" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" />
+                    <path d="M9 12l-4.463 4.463a5 5 0 1 1 7.071 -7.071l4.463 -4.463" />
+                    <path d="M12.5 5.5l5 5" />
+                    <path d="M14.5 7.5l5 5" />
+                    <path d="M3 21l3.536-3.536" />
+                    <path d="M17.464 8.536l3.536 -3.536" />
+                  </svg>
+                  <span className="ml-3 text-xl font-bold text-white">CENTRIC Tax AI Hub</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </button>
+                  <img className="h-9 w-9 rounded-full ring-2 ring-slate-700" src="https://picsum.photos/100/100" alt="User Avatar" />
+                </div>
+              </div>
+            </nav>
+          </header>
+        );
+      };
+
+      const MenuCard = ({ icon, title, description, link }) => {
+        const Tag = link ? 'a' : 'div';
+        const props = link ? { href: link, target: '_blank', rel: 'noopener noreferrer' } : {};
+
+        return (
+          <Tag
+            {...props}
+            className="group relative block rounded-xl border border-slate-800 bg-slate-800/50 p-4 shadow-lg transition-all duration-300 ease-in-out hover:border-blue-500/50 hover:shadow-blue-500/20 hover:-translate-y-1 cursor-pointer"
+          >
+            <div className="flex items-center mb-1">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-700 text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+                {icon}
+              </div>
+              <h3 className="ml-3 text-lg font-bold text-white leading-tight">{title}</h3>
+            </div>
+            <p className="text-sm text-slate-400 leading-relaxed line-clamp-2">{description}</p>
+            <div className="absolute top-1 right-1 p-2 text-slate-600 opacity-0 transition-opacity group-hover:opacity-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </Tag>
+        );
+      };
+
+      // --- App Component ---
+      const App = () => {
+        const [searchTerm, setSearchTerm] = useState('');
+        const [menuItems, setMenuItems] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState(null);
+        const [usingFallback, setUsingFallback] = useState(false);
+        const [showRawError, setShowRawError] = useState(false);
+
+        const fetchMenuItems = async () => {
+            setLoading(true);
+            setError(null);
+            
+            const encodedRange = encodeURIComponent(SHEET_RANGE);
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${encodedRange}?key=${GOOGLE_API_KEY}`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    referrerPolicy: 'no-referrer' 
+                });
+                
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw { status: response.status, message: "API 응답이 올바른 JSON 형식이 아닙니다.", rawData: text };
+                }
+                
+                if (!response.ok) {
+                    // Throw a structured error object that includes all details from Google
+                    throw { 
+                        status: response.status, 
+                        message: data.error?.message || response.statusText,
+                        details: data.error?.details,
+                        statusText: data.error?.status || 'UNKNOWN_ERROR',
+                        rawData: data
+                    };
+                }
+
+                if (!data.values || data.values.length === 0) {
+                    setMenuItems([]);
+                    return;
+                }
+                
+                const rows = data.values;
+                const items = rows.slice(1).map(row => {
+                    const title = row[0] || '';
+                    const description = row[1] || '';
+                    const link = row[2] || '';
+                    const iconName = row[3] || 'AIIcon';
+                    
+                    // Column E (Index 4) for sorting
+                    // If empty or undefined, give it a high number to put it at the end
+                    const sortRaw = row[4];
+                    const sortOrder = (sortRaw !== undefined && sortRaw !== '' && !isNaN(Number(sortRaw))) 
+                                      ? Number(sortRaw) 
+                                      : 9999;
+                    
+                    // Column F (Index 5) for visibility
+                    // '1' means visible, anything else is hidden
+                    const visibilityRaw = row[8];
+                    const isVisible = String(visibilityRaw).trim() === '1';
+
+                    const IconComponent = ICON_MAP[iconName] || ICON_MAP['AIIcon'];
+                    return { title, description, link, icon: <IconComponent />, sortOrder, isVisible };
+                }).filter(item => item.isVisible); // Filter out hidden items
+                
+                // Sort items based on sortOrder (Ascending), then by Title for stability
+                items.sort((a, b) => {
+                    if (a.sortOrder !== b.sortOrder) {
+                        return a.sortOrder - b.sortOrder;
+                    }
+                    return a.title.localeCompare(b.title);
+                });
+                
+                setMenuItems(items);
+                setUsingFallback(false);
+            } catch (err) {
+                console.error("Connection Diagnosis:", err);
+
+                // --- Diagnostic: Try to fetch spreadsheet metadata to find real sheet names ---
+                let availableTabs = null;
+                // If it's a bad request (400) or valid permission but range error
+                if (err.status === 400 || (err.status !== 403 && err.status !== 404)) {
+                     try {
+                        const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}?key=${GOOGLE_API_KEY}`;
+                        const metaRes = await fetch(metaUrl);
+                        if (metaRes.ok) {
+                            const metaData = await metaRes.json();
+                            availableTabs = metaData.sheets.map(s => s.properties.title);
+                        }
+                     } catch (e) { console.log("Meta fetch failed", e); }
+                }
+                
+                // --- Fallback data ---
+                const fallbackItems = DEFAULT_MENU_ITEMS_DATA.map(item => ({
+                    ...item,
+                    icon: ICON_MAP[item.iconName] ? React.createElement(ICON_MAP[item.iconName]) : <AIIcon />
+                }));
+                setMenuItems(fallbackItems);
+                setUsingFallback(true);
+
+                // --- Advanced Error Analysis ---
+                let userMsg = err.message || '알 수 없는 오류';
+                let errorType = 'general';
+                let projectNumber = null;
+
+                // Convert entire error object to string for keyword search (case-insensitive)
+                const errStr = (JSON.stringify(err) + (err.message || '')).toLowerCase();
+
+                // Case 1: API Not Enabled
+                if (errStr.includes('enable') || (err.status === 403 && errStr.includes('access not configured'))) {
+                    errorType = 'not_enabled';
+                    // Improved regex to capture "project 12345" or "project '12345'"
+                    const match = (err.message || '').match(/project\D+?(\d+)/i);
+                    if (match) projectNumber = match[1];
+                } 
+                // Case 2: Invalid Key
+                else if (errStr.includes('key invalid') || errStr.includes('api key not valid')) {
+                    errorType = 'invalid_key';
+                } 
+                // Case 3: Permission Denied (Sheet is Private vs IP/Referrer Block)
+                else if (err.status === 403) {
+                     if (errStr.includes('referer') || errStr.includes('ip address') || errStr.includes('requests from this')) {
+                         errorType = 'key_restriction';
+                     } else {
+                         errorType = 'permission_denied'; // Likely sheet private
+                     }
+                } 
+                // Case 4: Invalid Range / Sheet Name
+                else if (err.status === 400 && (errStr.includes('range') || errStr.includes('parse') || errStr.includes('unable to parse'))) {
+                    errorType = 'invalid_range'; 
+                }
+                // Case 5: Not Found
+                else if (err.status === 404) {
+                    errorType = 'not_found';
+                }
+                
+                setError({ message: userMsg, type: errorType, projectNumber, raw: err, availableTabs });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        useEffect(() => {
+            fetchMenuItems();
+        }, []);
+
+        const filteredMenuItems = useMemo(() => {
+          if (!searchTerm) return menuItems;
+          return menuItems.filter(
+            (item) =>
+              item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              item.description.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }, [searchTerm, menuItems]);
+
+        // --- Diagnostic Error Display ---
+        const ErrorDisplay = ({ error }) => {
+            if (!error) return null;
+
+            let title = "연결 오류";
+            let content = null;
+            let colorClass = "bg-slate-800 border-slate-700 text-slate-300";
+            let icon = (
+                <svg className="h-6 w-6 mr-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            );
+
+            // --- Render different advice based on error type ---
+            if (error.type === 'not_enabled') {
+                colorClass = "bg-yellow-900/20 border-yellow-800/50 text-yellow-100";
+                title = "⚠️ Google Sheets API 미설정";
+                content = (
+                    <div className="space-y-4">
+                         <div className="bg-black/30 p-4 rounded border border-yellow-700/30">
+                            <p className="font-bold text-yellow-400 text-lg mb-2">해결 방법:</p>
+                            <p className="mb-3 text-sm">
+                                설정하신 API Key는 아래 프로젝트 번호에 속해 있습니다.<br/>
+                                하지만 현재 Google Cloud Console에서 보고 계신 프로젝트가 다를 수 있습니다.
+                            </p>
+                            {error.projectNumber ? (
+                                <div className="p-4 bg-slate-900 rounded border border-slate-600 flex flex-col gap-2">
+                                    <span className="text-slate-400 text-xs uppercase tracking-wider">API Key's Project Number</span>
+                                    <span className="text-3xl font-mono font-bold text-yellow-300 tracking-widest select-all cursor-text">{error.projectNumber}</span>
+                                    <div className="text-xs text-slate-500 mt-1">
+                                        ▲ 위 번호를 Google Cloud Console 상단 <strong>검색창</strong>에 입력하여 프로젝트를 찾으세요.
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-red-400">오류 메시지에서 프로젝트 번호를 추출하지 못했습니다. 상세 정보를 확인하세요.</p>
+                            )}
+                         </div>
+                         <div className="text-sm text-slate-400">
+                            프로젝트를 찾은 후: <strong>API 및 서비스 > 라이브러리 > Google Sheets API</strong>를 찾아 '사용' 버튼을 누르세요.
+                         </div>
+                    </div>
+                );
+            } else if (error.type === 'invalid_range') {
+                colorClass = "bg-orange-900/20 border-orange-800/50 text-orange-100";
+                title = "❌ 시트 탭(Tab) 이름 오류";
+                content = (
+                    <div className="space-y-3">
+                        <p>
+                            스프레드시트 파일은 찾았으나, 요청한 탭 <strong>'{SHEET_RANGE}'</strong>를 찾을 수 없습니다.
+                        </p>
+                        {error.availableTabs && error.availableTabs.length > 0 ? (
+                            <div className="bg-black/30 p-3 rounded border border-orange-700/30">
+                                <p className="font-bold text-orange-300 mb-1">실제 사용 가능한 탭 목록:</p>
+                                <ul className="list-disc list-inside text-sm space-y-1 text-white">
+                                    {error.availableTabs.map(tab => (
+                                        <li key={tab}>
+                                            {tab} {tab === 'Tax_Hub' ? '(이름은 같지만 공백/대소문자가 다를 수 있음)' : ''}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <p className="mt-2 text-xs text-slate-400">
+                                    코드의 <code>SHEET_RANGE</code>를 위 목록 중 하나로 변경하세요.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="bg-black/30 p-3 rounded border border-orange-700/30">
+                                <p className="font-bold text-orange-300 mb-1">확인사항:</p>
+                                <p className="text-sm">
+                                    구글 시트 <strong>하단</strong>의 탭 이름이 정확히 <code>Tax_Hub</code>인지 확인하세요.<br/>
+                                    (파일명이 아닙니다. 탭 이름입니다.)
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                );
+            } else if (error.type === 'permission_denied') {
+                colorClass = "bg-blue-900/20 border-blue-800/50 text-blue-100";
+                title = "🔒 파일 권한 부족 (매우 중요)";
+                content = (
+                    <div className="space-y-3">
+                        <p>시트가 정상이어도 <strong>API Key</strong>만으로는 비공개 파일을 읽을 수 없습니다.</p>
+                        <div className="bg-black/30 p-3 rounded border border-blue-700/30">
+                            <p className="font-bold text-blue-300 mb-1">해결 방법 (필수):</p>
+                            <ol className="list-decimal list-inside text-sm space-y-2">
+                                <li>스프레드시트 우측 상단 <strong>[공유]</strong> 버튼 클릭</li>
+                                <li>'일반 액세스'가 '제한됨'으로 되어 있으면 API가 차단됩니다.</li>
+                                <li>반드시 <strong>[링크가 있는 모든 사용자]</strong>로 변경하세요.</li>
+                                <li>권한은 <strong>[뷰어]</strong>면 충분합니다.</li>
+                            </ol>
+                        </div>
+                    </div>
+                );
+            } else if (error.type === 'key_restriction') {
+                colorClass = "bg-red-900/20 border-red-800/50 text-red-100";
+                title = "🚫 API Key 제한 (HTTP Referrer/IP)";
+                content = (
+                    <div className="space-y-3">
+                        <p>API Key 설정에서 <strong>웹사이트 제한</strong>이나 <strong>IP 제한</strong>이 걸려 있어 차단되었습니다.</p>
+                        <p className="text-sm bg-black/30 p-2 rounded">
+                            테스트 중에는 키 제한을 <strong>'없음(None)'</strong>으로 설정해보세요.
+                        </p>
+                    </div>
+                );
+            } else {
+                content = <p>{error.message}</p>;
+            }
+
+            return (
+                <div className={`mb-8 max-w-4xl mx-auto p-6 rounded-lg border ${colorClass} relative overflow-hidden`}>
+                    <div className="flex items-start mb-4">
+                        {icon}
+                        <h3 className="font-bold text-lg">{title}</h3>
+                    </div>
+                    
+                    <div className="mb-4 pl-9">
+                        {content}
+                    </div>
+
+                    <div className="pl-9 flex flex-wrap gap-3 items-center">
+                         <button 
+                            onClick={fetchMenuItems}
+                            className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition shadow-md"
+                        >
+                            설정 확인 후 재시도
+                        </button>
+                        
+                        <button
+                            onClick={() => setShowRawError(!showRawError)}
+                            className="text-xs text-slate-400 hover:text-slate-200 underline"
+                        >
+                            {showRawError ? '상세 기술 정보 숨기기' : '상세 기술 정보(Raw Error) 보기'}
+                        </button>
+                    </div>
+
+                    {showRawError && (
+                        <div className="mt-4 p-4 bg-black/50 rounded text-xs font-mono text-green-400 overflow-auto max-h-64 whitespace-pre-wrap border border-slate-700">
+                            <strong>Status:</strong> {error.raw?.status || 'N/A'}<br/>
+                            <strong>Details:</strong> {error.raw?.message || 'N/A'}<br/>
+                            <strong>Full Error:</strong><br/>
+                            {JSON.stringify(error.raw, null, 2)}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        return (
+          <div className="min-h-screen bg-slate-900 font-sans">
+            <div className="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-sm border-b border-slate-800">
+              <Header />
+              <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
+                <div className="max-w-xl mx-auto">
+                  <div className="relative">
+                     {/* Search Input */}
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="모듈 검색..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="block w-full rounded-md border-0 bg-slate-800/80 py-3 pl-10 pr-3 text-slate-100 ring-1 ring-inset ring-slate-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 sm:text-sm sm:leading-6 transition"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <main className="container mx-auto px-4 pb-8 sm:px-6 lg:px-8">
+               <div className="max-w-3xl mx-auto text-center pt-8 pb-6">
+                  <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                    CENTRIC Tax AI Hub
+                  </h2>
+                  <p className="mt-4 text-lg text-slate-300">
+                    CENTRIC Tax AI 허브입니다. 한 곳에서 모든 모듈에 접근할 수 있습니다.
+                  </p>
+                  {usingFallback && !loading && (
+                      <span className="inline-block mt-2 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs border border-slate-700">
+                          ⚠️ 오프라인/데모 데이터 모드
+                      </span>
+                  )}
+                </div>
+
+              {loading ? (
+                 <div className="flex justify-center mt-16">
+                    <div className="text-slate-400 text-lg animate-pulse">데이터 연결 확인 중...</div>
+                 </div>
+              ) : (
+                <>
+                    <ErrorDisplay error={error} />
+
+                    {filteredMenuItems.length > 0 ? (
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {filteredMenuItems.map((item, index) => (
+                            <MenuCard key={index} {...item} />
+                        ))}
+                        </div>
+                    ) : (
+                        <div className="mt-16 text-center">
+                            <p className="text-slate-400 text-lg">검색 결과가 없습니다.</p>
+                        </div>
+                    )}
+                </>
+              )}
+            </main>
+          </div>
+        );
+      };
+
+      // --- React DOM Render ---
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
+    </script>
+  </body>
+</html>
