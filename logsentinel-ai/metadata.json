@@ -1,5 +1,0 @@
-{
-  "name": "LogSentinel AI",
-  "description": "An intelligent PC usage history analyzer. Upload system logs (JSON/CSV) or use demo data to visualize productivity, track application usage, and detect anomalies using Gemini AI.",
-  "requestFramePermissions": []
-}
