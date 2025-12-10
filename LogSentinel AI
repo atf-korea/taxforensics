@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LogSentinel AI - Forensic Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              slate: {
+                850: '#1e293b',
+                900: '#0f172a',
+                950: '#020617',
+              },
+              cyan: {
+                450: '#15aecf',
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['Fira Code', 'monospace'],
+            },
+          },
+        },
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      body {
+        background-color: #0f172a;
+        color: #e2e8f0;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e293b; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #475569; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b; 
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
+    "react/": "https://esm.sh/react@^19.2.1/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
+    "recharts": "https://esm.sh/recharts@^3.5.1",
+    "react-markdown": "https://esm.sh/react-markdown@^10.1.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="react,typescript" data-type="module">
+      import React, { useState, useEffect, useRef, useMemo } from 'https://esm.sh/react@18.2.0';
+      import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
+      import { 
+        BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+        PieChart, Pie, Cell, LineChart, Line 
+      } from 'https://esm.sh/recharts@2.12.0';
+      import { 
+        Activity, BarChart2, FileText, BrainCircuit, UploadCloud, LogOut, 
+        LayoutDashboard, ScanSearch, Loader2, Play, FileJson, AlertCircle, 
+        Download, Terminal, Clock, CheckCircle, AlertTriangle, Coffee,
+        Send, Bot, User, Sparkles, Search, Filter, ArrowUp, ArrowDown,
+        Usb, FolderOpen, ShieldAlert
+      } from 'https://esm.sh/lucide-react@0.344.0';
+      import { GoogleGenAI } from 'https://esm.sh/@google/genai@0.1.1';
+      import ReactMarkdown from 'https://esm.sh/react-markdown@9.0.1';
+
+      // ----------------------------------------------------------------------
+      // TYPES
+      // ----------------------------------------------------------------------
+      
+      // Mock process.env for the browser
+      window.process = { env: { API_KEY: '' } };
+
+      const AppView = {
+        UPLOAD: 'UPLOAD',
+        DASHBOARD: 'DASHBOARD',
+        ANALYSIS: 'ANALYSIS',
+        LOGS: 'LOGS',
+        FORENSICS: 'FORENSICS'
+      };
+
+      const LogCategory = {
+        PRODUCTIVITY: 'Productivity',
+        ENTERTAINMENT: 'Entertainment',
+        SYSTEM: 'System',
+        COMMUNICATION: 'Communication',
+        DEVELOPMENT: 'Development',
+        UNCATEGORIZED: 'Uncategorized'
+      };
+
+      const ArtifactType = {
+        USB_DEVICE: 'USB_DEVICE',
+        RECENT_DOC: 'RECENT_DOC',
+        SHELLBAG: 'SHELLBAG'
+      };
+
+      // ----------------------------------------------------------------------
+      // SERVICES: Mock Data
+      // ----------------------------------------------------------------------
+
+      const generateMockData = () => {
+        const apps = [
+          { name: 'VS Code', category: LogCategory.DEVELOPMENT },
+          { name: 'Google Chrome', category: LogCategory.UNCATEGORIZED },
+          { name: 'Slack', category: LogCategory.COMMUNICATION },
+          { name: 'Spotify', category: LogCategory.ENTERTAINMENT },
+          { name: 'Zoom', category: LogCategory.COMMUNICATION },
+          { name: 'Figma', category: LogCategory.PRODUCTIVITY },
+          { name: 'Terminal', category: LogCategory.DEVELOPMENT },
+          { name: 'System Settings', category: LogCategory.SYSTEM },
+          { name: 'Discord', category: LogCategory.COMMUNICATION },
+          { name: 'Steam', category: LogCategory.ENTERTAINMENT },
+        ];
+
+        const logs = [];
+        const now = new Date();
+        
+        for (let i = 0; i < 7; i++) {
+          const day = new Date(now);
+          day.setDate(day.getDate() - i);
+          const entriesCount = Math.floor(Math.random() * 20) + 20;
+          let currentTime = new Date(day);
+          currentTime.setHours(9, 0, 0, 0);
+
+          for (let j = 0; j < entriesCount; j++) {
+            const app = apps[Math.floor(Math.random() * apps.length)];
+            const duration = Math.floor(Math.random() * 1800) + 60;
+            currentTime = new Date(currentTime.getTime() + duration * 1000 + Math.random() * 60000);
+
+            let category = app.category;
+            let title = `Main Window - ${app.name}`;
+            
+            if (app.name === 'Google Chrome') {
+              const rand = Math.random();
+              if (rand > 0.7) {
+                title = 'Netflix - Watch TV Shows Online';
+                category = LogCategory.ENTERTAINMENT;
+              } else if (rand > 0.4) {
+                title = 'GitHub - Pull Request #402';
+                category = LogCategory.DEVELOPMENT;
+              } else {
+                title = 'Google Search - React Hooks';
+                category = LogCategory.PRODUCTIVITY;
+              }
+            } else if (app.name === 'VS Code') {
+              title = `index.tsx - Project Alpha`;
+            }
+
+            logs.push({
+              id: Math.random().toString(36).substr(2, 9),
+              timestamp: currentTime.toISOString(),
+              application: app.name,
+              windowTitle: title,
+              durationSeconds: duration,
+              category: category
+            });
+          }
+        }
+        return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      };
+
+      const generateForensicArtifacts = () => {
+        const artifacts = [];
+        const now = new Date();
+
+        const usbDevices = [
+          { name: 'Samsung T7 Shield', serial: 'S5T7NS0R123456', risk: 'LOW' },
+          { name: 'Sandisk Cruzer Blade', serial: '4C530001290812111023', risk: 'MEDIUM' },
+          { name: 'Unknown Mass Storage', serial: 'Generic-123901', risk: 'HIGH' }
+        ];
+
+        usbDevices.forEach(device => {
+          const date = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);
+          artifacts.push({
+            id: Math.random().toString(36).substr(2, 9),
+            timestamp: date.toISOString(),
+            type: ArtifactType.USB_DEVICE,
+            name: device.name,
+            path: `USBSTOR\\Disk&Ven_${device.name.split(' ')[0]}&Prod_Storage\\${device.serial}`,
+            action: 'Device Connected',
+            riskLevel: device.risk
+          });
+        });
+
+        const docs = [
+          { name: 'Q4_Financial_Report.xlsx', path: 'C:\\Users\\Admin\\Documents\\Finance', risk: 'MEDIUM' },
+          { name: 'Project_Alpha_Secrets.docx', path: 'C:\\Users\\Admin\\Desktop\\Private', risk: 'HIGH' },
+          { name: 'Resume_2025.pdf', path: 'C:\\Users\\Admin\\Downloads', risk: 'LOW' },
+          { name: 'passwords.txt', path: 'D:\\Backups', risk: 'HIGH' },
+          { name: 'Meeting_Notes.txt', path: 'C:\\Users\\Admin\\Desktop', risk: 'LOW' }
+        ];
+
+        docs.forEach(doc => {
+          const date = new Date(now.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000);
+          artifacts.push({
+            id: Math.random().toString(36).substr(2, 9),
+            timestamp: date.toISOString(),
+            type: ArtifactType.RECENT_DOC,
+            name: doc.name,
+            path: doc.path,
+            action: 'File Accessed (LNK)',
+            riskLevel: doc.risk
+          });
+        });
+
+        const folders = [
+          { name: 'My Pictures', path: 'C:\\Users\\Admin\\Pictures', risk: 'LOW' },
+          { name: 'Hidden_Project', path: 'E:\\Hidden_Project', risk: 'HIGH' },
+          { name: 'System32', path: 'C:\\Windows\\System32', risk: 'MEDIUM' },
+          { name: 'Downloads', path: 'C:\\Users\\Admin\\Downloads', risk: 'LOW' }
+        ];
+
+        folders.forEach(folder => {
+          const date = new Date(now.getTime() - Math.random() * 60 * 24 * 60 * 60 * 1000);
+          artifacts.push({
+            id: Math.random().toString(36).substr(2, 9),
+            timestamp: date.toISOString(),
+            type: ArtifactType.SHELLBAG,
+            name: folder.name,
+            path: folder.path,
+            action: 'Folder Explored',
+            riskLevel: folder.risk
+          });
+        });
+
+        return artifacts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      };
+
+      // ----------------------------------------------------------------------
+      // SERVICES: Gemini
+      // ----------------------------------------------------------------------
+      
+      const summarizeLogsForContext = (logs, artifacts = []) => {
+        const recentLogs = logs.slice(0, 30).map(l => 
+          `[${l.timestamp.split('T')[1].split('.')[0]}] App: ${l.application} | Title: ${l.windowTitle} | Dur: ${Math.round(l.durationSeconds / 60)}m`
+        ).join('\n');
+
+        const appStats = {};
+        logs.forEach(l => {
+          appStats[l.application] = (appStats[l.application] || 0) + l.durationSeconds;
+        });
+
+        const summaryStats = Object.entries(appStats)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10)
+          .map(([name, dur]) => `${name}: ${(dur / 3600).toFixed(1)} hours`)
+          .join(', ');
+
+        const usbArtifacts = artifacts.filter(a => a.type === ArtifactType.USB_DEVICE).map(a => `- ${a.name} (Serial: ${a.path}) connected at ${a.timestamp}`).join('\n');
+        const recentDocs = artifacts.filter(a => a.type === ArtifactType.RECENT_DOC && a.riskLevel === 'HIGH').map(a => `- HIGH RISK FILE: ${a.name} in ${a.path}`).join('\n');
+
+        return `
+Data Summary:
+Top Apps by Duration: ${summaryStats}
+
+Forensic Highlights:
+USB Connections:
+${usbArtifacts || 'None detected.'}
+
+Sensitive File Access (Recent Docs):
+${recentDocs || 'No high risk files detected.'}
+
+Recent Detailed Activity Log (Last 30 events):
+${recentLogs}
+        `;
+      };
+
+      const analyzeLogsWithGemini = async (logs, artifacts, userPrompt) => {
+        const key = process.env.API_KEY || localStorage.getItem('GEMINI_API_KEY');
+        if (!key) {
+          return "API Key is missing. Please enter it in the browser console via `localStorage.setItem('GEMINI_API_KEY', 'your-key')` or ensure it's set in the environment.";
+        }
+        
+        const ai = new GoogleGenAI({ apiKey: key });
+        const contextData = summarizeLogsForContext(logs, artifacts);
+        const systemInstruction = `
+          You are an expert Digital Forensics and Productivity Analyst. 
+          You are analyzing a user's PC usage history logs and forensic artifacts.
+          Your goal is to provide insights on:
+          1. Productivity trends.
+          2. Data Exfiltration Risks (USB usage + sensitive files).
+          3. Anomalies.
+          4. Threat Score (0-100).
+          Be professional and concise. Use Markdown.
+        `;
+
+        try {
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Context Data:\n${contextData}\n\nUser Question: ${userPrompt}`,
+            config: { systemInstruction: systemInstruction }
+          });
+          return response.text || "No analysis generated.";
+        } catch (error) {
+          console.error("Gemini API Error:", error);
+          return "Error communicating with AI service. Check API Key.";
+        }
+      };
+
+      // ----------------------------------------------------------------------
+      // COMPONENTS
+      // ----------------------------------------------------------------------
+
+      const FileUpload = ({ onUpload, onLoadDemo, onStartForensicScan }) => {
+        const fileInputRef = useRef(null);
+        const [error, setError] = useState(null);
+        const [isDragging, setIsDragging] = useState(false);
+
+        const parseJSON = (content) => {
+          try {
+            const data = JSON.parse(content);
+            if (Array.isArray(data)) {
+              // Standard Logs
+              onUpload(data.map(item => ({
+                ...item,
+                id: item.id || Math.random().toString(),
+                category: item.category || LogCategory.UNCATEGORIZED
+              })));
+            } else if (data.logs || data.artifacts) {
+              // Full Export
+              onUpload(data.logs || [], data.artifacts || []);
+            } else {
+              setError("Invalid JSON format.");
+            }
+          } catch (e) {
+            setError("Failed to parse JSON file.");
+          }
+        };
+
+        const handleDownloadScript = () => {
+          const scriptContent = `
+# LogSentinel AI - Forensic Collector Script
+$ErrorActionPreference = "SilentlyContinue"
+Write-Host "Starting Forensic Collection..." -ForegroundColor Cyan
+$data = @{ logs = @(); artifacts = @() }
+
+# 1. Recent Docs
+Write-Host "[-] Scanning Recent Documents..."
+$recentPath = "$env:APPDATA\\Microsoft\\Windows\\Recent"
+if (Test-Path $recentPath) {
+    Get-ChildItem $recentPath -File | Select-Object -First 50 | ForEach-Object {
+        $data.artifacts += @{
+            id = [Guid]::NewGuid().ToString()
+            timestamp = $_.LastAccessTime.ToString("o")
+            type = "RECENT_DOC"
+            name = $_.Name
+            path = $_.FullName
+            action = "File Accessed (LNK)"
+            riskLevel = "UNKNOWN"
+        }
+    }
+}
+
+# 2. USB Devices
+Write-Host "[-] Scanning USB Devices..."
+Get-PnpDevice -Class 'USB' -Status OK | Where-Object { $_.FriendlyName -notmatch 'Hub|Controller|Composite' } | ForEach-Object {
+    $data.artifacts += @{
+        id = [Guid]::NewGuid().ToString()
+        timestamp = (Get-Date).ToString("o")
+        type = "USB_DEVICE"
+        name = $_.FriendlyName
+        path = $_.InstanceId
+        action = "Device Present"
+        riskLevel = "UNKNOWN"
+    }
+}
+
+$outFile = "forensics_data.json"
+$data | ConvertTo-Json -Depth 4 | Out-File $outFile -Encoding utf8
+Write-Host "[+] Collection Complete! Upload '$outFile' to LogSentinel." -ForegroundColor Green
+Start-Sleep -Seconds 2
+`;
+          const blob = new Blob([scriptContent], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'collect_data.ps1';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        };
+
+        return (
+          <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-8 w-full shadow-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div 
+                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative ${isDragging ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/50'}`}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => parseJSON(ev.target.result);
+                    reader.readAsText(file);
+                  }
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input type="file" ref={fileInputRef} onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => parseJSON(ev.target.result);
+                    reader.readAsText(file);
+                  }
+                }} accept=".json" className="hidden" />
+                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-cyan-400">
+                  <UploadCloud className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Upload Data</h3>
+                <p className="text-slate-400 mb-4">Drag & drop <code>json</code> file</p>
+                {error && (
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 text-red-400 bg-red-950/90 px-4 py-2 rounded-lg border border-red-900/50">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm">{error}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-6">
+                <div className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Terminal className="w-5 h-5 text-green-400" />
+                    <h3 className="text-lg font-semibold text-white">Analyze Actual PC Data</h3>
+                  </div>
+                  <p className="text-slate-400 text-xs mb-4">Run collector script on target PC</p>
+                  <button onClick={handleDownloadScript} className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors">
+                    <Download className="w-4 h-4" />
+                    Download Collector Script
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <button onClick={onStartForensicScan} className="w-full inline-flex items-center justify-center px-6 py-3 font-bold text-white transition-all bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg hover:from-cyan-500 hover:to-blue-500">
+                    <ScanSearch className="w-5 h-5 mr-2" />
+                    Simulate Forensic Scan
+                  </button>
+                  <button onClick={onLoadDemo} className="w-full inline-flex items-center justify-center px-6 py-3 font-medium text-slate-400 transition-all hover:bg-slate-800 rounded-lg border border-transparent hover:border-slate-700">
+                    <Play className="w-4 h-4 mr-2" />
+                    Load Demo Data
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const ForensicsView = ({ artifacts }) => {
+        const [activeTab, setActiveTab] = useState('ALL');
+        const [searchTerm, setSearchTerm] = useState('');
+
+        const filtered = artifacts.filter(item => {
+          const matchesTab = activeTab === 'ALL' || item.type === activeTab;
+          const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.path.toLowerCase().includes(searchTerm.toLowerCase());
+          return matchesTab && matchesSearch;
+        });
+
+        const getIcon = (type) => {
+          switch (type) {
+            case ArtifactType.USB_DEVICE: return <Usb className="w-4 h-4" />;
+            case ArtifactType.RECENT_DOC: return <FileText className="w-4 h-4" />;
+            case ArtifactType.SHELLBAG: return <FolderOpen className="w-4 h-4" />;
+            default: return <AlertTriangle className="w-4 h-4" />;
+          }
+        };
+
+        const getRiskColor = (risk) => {
+          switch (risk) {
+            case 'HIGH': return 'text-red-400 bg-red-500/10 border-red-500/20';
+            case 'MEDIUM': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+            default: return 'text-slate-400 bg-slate-500/10 border-slate-500/20';
+          }
+        };
+
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
+                <div><p className="text-slate-400 text-xs font-bold uppercase">USB Connections</p><h3 className="text-2xl font-bold text-white">{artifacts.filter(a => a.type === ArtifactType.USB_DEVICE).length}</h3></div>
+                <div className="w-12 h-12 bg-cyan-500/10 text-cyan-400 rounded-lg flex items-center justify-center"><Usb className="w-6 h-6" /></div>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
+                <div><p className="text-slate-400 text-xs font-bold uppercase">Recent Files</p><h3 className="text-2xl font-bold text-white">{artifacts.filter(a => a.type === ArtifactType.RECENT_DOC).length}</h3></div>
+                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-lg flex items-center justify-center"><FileText className="w-6 h-6" /></div>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
+                <div><p className="text-slate-400 text-xs font-bold uppercase">High Risk</p><h3 className="text-2xl font-bold text-red-500">{artifacts.filter(a => a.riskLevel === 'HIGH').length}</h3></div>
+                <div className="w-12 h-12 bg-red-500/10 text-red-400 rounded-lg flex items-center justify-center"><ShieldAlert className="w-6 h-6" /></div>
+              </div>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden min-h-[500px] flex flex-col">
+              <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row gap-4 justify-between bg-slate-800/20">
+                <div className="flex p-1 bg-slate-950 rounded-lg border border-slate-800">
+                  {['ALL', ArtifactType.USB_DEVICE, ArtifactType.RECENT_DOC, ArtifactType.SHELLBAG].map(tab => (
+                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}>{tab === 'ALL' ? 'All' : tab.replace('_', ' ')}</button>
+                  ))}
+                </div>
+                <div className="relative w-full md:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                  <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-cyan-500" />
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-950/50 text-slate-400 text-xs uppercase font-semibold">
+                    <tr><th className="px-6 py-4">Timestamp</th><th className="px-6 py-4">Type</th><th className="px-6 py-4">Name</th><th className="px-6 py-4">Details</th><th className="px-6 py-4 text-right">Risk</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {filtered.map(item => (
+                      <tr key={item.id} className="hover:bg-slate-800/30">
+                        <td className="px-6 py-4 text-slate-400 font-mono text-xs">{new Date(item.timestamp).toLocaleString()}</td>
+                        <td className="px-6 py-4"><div className="flex items-center gap-2 text-slate-300">{getIcon(item.type)}<span className="capitalize">{item.type.toLowerCase().replace('_', ' ')}</span></div></td>
+                        <td className="px-6 py-4 font-medium text-white">{item.name}</td>
+                        <td className="px-6 py-4 text-slate-400 max-w-xs truncate" title={item.path}>{item.path}</td>
+                        <td className="px-6 py-4 text-right"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRiskColor(item.riskLevel)}`}>{item.riskLevel}</span></td>
+                      </tr>
+                    ))}
+                    {filtered.length === 0 && <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-500">No artifacts found.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const Dashboard = ({ logs }) => {
+        const stats = useMemo(() => {
+          if (!logs.length) return null;
+          const totalDuration = logs.reduce((acc, log) => acc + log.durationSeconds, 0);
+          const appMap = new Map();
+          const catMap = new Map();
+          const dateMap = new Map();
+
+          logs.forEach(log => {
+            appMap.set(log.application, (appMap.get(log.application) || 0) + log.durationSeconds);
+            catMap.set(log.category, (catMap.get(log.category) || 0) + log.durationSeconds);
+            const date = log.timestamp.split('T')[0];
+            dateMap.set(date, (dateMap.get(date) || 0) + log.durationSeconds);
+          });
+
+          const topApps = Array.from(appMap.entries()).map(([name, duration]) => ({ name, duration: Math.round(duration / 60) })).sort((a, b) => b.duration - a.duration).slice(0, 5);
+          const categoryData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+          const activityData = Array.from(dateMap.entries()).map(([date, seconds]) => ({ date, hours: parseFloat((seconds / 3600).toFixed(1)) })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          
+          const prodSeconds = catMap.get(LogCategory.PRODUCTIVITY) || 0;
+          const devSeconds = catMap.get(LogCategory.DEVELOPMENT) || 0;
+          const productivityScore = Math.min(100, Math.round(((prodSeconds + devSeconds) / totalDuration) * 100));
+
+          return { totalHours: (totalDuration / 3600).toFixed(1), topApps, categoryData, activityData, productivityScore };
+        }, [logs]);
+
+        if (!stats) return <div>No data</div>;
+        const COLORS = ['#22d3ee', '#818cf8', '#34d399', '#f472b6', '#fbbf24', '#94a3b8'];
+
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Clock className="w-24 h-24 text-cyan-500" /></div>
+                <p className="text-slate-400 text-sm font-medium">Total Time</p>
+                <h3 className="text-3xl font-bold text-white mt-2">{stats.totalHours} <span className="text-lg text-slate-500 font-normal">hrs</span></h3>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><CheckCircle className="w-24 h-24 text-green-500" /></div>
+                <p className="text-slate-400 text-sm font-medium">Productivity</p>
+                <h3 className="text-3xl font-bold text-white mt-2">{stats.productivityScore}%</h3>
+                <div className="w-full bg-slate-800 h-1 mt-3 rounded-full overflow-hidden"><div className="h-full bg-green-500" style={{ width: `${stats.productivityScore}%`}}></div></div>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Coffee className="w-24 h-24 text-yellow-500" /></div>
+                <p className="text-slate-400 text-sm font-medium">Top App</p>
+                <h3 className="text-2xl font-bold text-white mt-2 truncate">{stats.topApps[0]?.name || 'N/A'}</h3>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><AlertTriangle className="w-24 h-24 text-pink-500" /></div>
+                <p className="text-slate-400 text-sm font-medium">Unique Apps</p>
+                <h3 className="text-3xl font-bold text-white mt-2">{stats.categoryData.length > 0 ? logs.reduce((acc, curr) => acc.add(curr.application), new Set()).size : 0}</h3>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <h3 className="text-lg font-semibold text-white mb-6">Activity Trend</h3>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={stats.activityData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                      <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickFormatter={(val) => val.split('-').slice(1).join('/')} />
+                      <YAxis stroke="#94a3b8" fontSize={12} unit="h" />
+                      <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }} />
+                      <Line type="monotone" dataKey="hours" stroke="#22d3ee" strokeWidth={3} dot={{ r: 4, fill: '#0f172a' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <h3 className="text-lg font-semibold text-white mb-6">Distribution</h3>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={stats.categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
+                        {stats.categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />)}
+                      </Pie>
+                      <Tooltip formatter={(value) => `${(value / 3600).toFixed(1)} hrs`} contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const AIAnalysis = ({ logs, artifacts = [] }) => {
+        const [messages, setMessages] = useState([{
+          role: 'ai', content: 'I have analyzed the data. Ask me about productivity, forensic artifacts, or anomalies.', timestamp: new Date()
+        }]);
+        const [input, setInput] = useState('');
+        const [isLoading, setIsLoading] = useState(false);
+        const scrollRef = useRef(null);
+
+        useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
+
+        const handleSend = async () => {
+          if (!input.trim() || isLoading) return;
+          const userMsg = { role: 'user', content: input, timestamp: new Date() };
+          setMessages(prev => [...prev, userMsg]);
+          setInput('');
+          setIsLoading(true);
+          try {
+            const response = await analyzeLogsWithGemini(logs, artifacts, userMsg.content);
+            setMessages(prev => [...prev, { role: 'ai', content: response, timestamp: new Date() }]);
+          } catch (error) {
+            setMessages(prev => [...prev, { role: 'ai', content: 'Error processing request.', timestamp: new Date() }]);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        return (
+          <div className="flex flex-col h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+            <div className="bg-slate-800/50 p-4 border-b border-slate-700 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20"><Sparkles className="w-5 h-5 text-cyan-400" /></div>
+              <div><h3 className="font-semibold text-white">Gemini Forensic Assistant</h3><p className="text-xs text-slate-400">Powered by Gemini 2.5 Flash</p></div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6" ref={scrollRef}>
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
+                    {msg.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
+                  </div>
+                  <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed ${msg.role === 'user' ? 'bg-indigo-600/20 border border-indigo-500/20 text-indigo-100' : 'bg-slate-800 border border-slate-700 text-slate-200'}`}>
+                    {msg.role === 'ai' ? <div className="prose prose-invert prose-sm"><ReactMarkdown>{msg.content}</ReactMarkdown></div> : msg.content}
+                  </div>
+                </div>
+              ))}
+              {isLoading && <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center"><Bot className="w-5 h-5" /></div><div className="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-cyan-500" /><span className="text-sm text-slate-400">Analyzing...</span></div></div>}
+            </div>
+            <div className="p-4 bg-slate-800/30 border-t border-slate-700">
+              <div className="relative flex items-center">
+                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Ask about USB history, file access..." className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl py-4 pl-4 pr-14 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" disabled={isLoading} />
+                <button onClick={handleSend} disabled={isLoading || !input.trim()} className="absolute right-2 p-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 disabled:opacity-50"><Send className="w-5 h-5" /></button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const LogViewer = ({ logs }) => {
+        const [searchTerm, setSearchTerm] = useState('');
+        const [categoryFilter, setCategoryFilter] = useState('All');
+        const categories = ['All', ...new Set(logs.map(l => l.category))];
+
+        const filtered = logs.filter(log => (categoryFilter === 'All' || log.category === categoryFilter) && log.application.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        return (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-[calc(100vh-140px)]">
+            <div className="p-4 border-b border-slate-800 flex gap-4">
+              <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" /><input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-cyan-500" /></div>
+              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-cyan-500">{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {filtered.map(log => (
+                <div key={log.id} className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-slate-800/50 hover:bg-slate-800/30 text-sm items-center">
+                  <div className="col-span-2 text-slate-400 font-mono text-xs">{new Date(log.timestamp).toLocaleTimeString()}</div>
+                  <div className="col-span-2 text-white font-medium truncate">{log.application}</div>
+                  <div className="col-span-4 text-slate-300 truncate">{log.windowTitle}</div>
+                  <div className="col-span-2"><span className="px-2 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">{log.category}</span></div>
+                  <div className="col-span-2 text-right text-slate-400 font-mono">{Math.floor(log.durationSeconds / 60)}m</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      // ----------------------------------------------------------------------
+      // APP
+      // ----------------------------------------------------------------------
+
+      const NavButton = ({ active, onClick, icon, label, isOpen, extraClass = "" }) => (
+        <button onClick={onClick} className={`flex items-center gap-3 w-full p-3 rounded-lg transition-all ${active ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' : `text-slate-400 hover:text-white hover:bg-slate-800 ${extraClass}`} ${!isOpen && 'justify-center'}`}>
+          <span className="w-5 h-5">{icon}</span>{isOpen && <span className="font-medium">{label}</span>}
+        </button>
+      );
+
+      const App = () => {
+        const [logs, setLogs] = useState([]);
+        const [artifacts, setArtifacts] = useState([]);
+        const [currentView, setCurrentView] = useState(AppView.UPLOAD);
+        const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+        const [isScanning, setIsScanning] = useState(false);
+        const [scanStep, setScanStep] = useState(0);
+
+        const handleLoadDemo = () => {
+          setLogs(generateMockData());
+          setArtifacts([]);
+          setCurrentView(AppView.DASHBOARD);
+        };
+
+        const handleFileUpload = (uploadedLogs, uploadedArtifacts = []) => {
+          setLogs(uploadedLogs);
+          setArtifacts(uploadedArtifacts);
+          setCurrentView(uploadedArtifacts.length > 0 ? AppView.FORENSICS : AppView.DASHBOARD);
+        };
+
+        const handleStartForensicScan = () => {
+          setIsScanning(true);
+          setScanStep(0);
+          const steps = [
+            () => setScanStep(1),
+            () => setScanStep(2),
+            () => setScanStep(3),
+            () => setScanStep(4),
+            () => {
+              setLogs(generateMockData());
+              setArtifacts(generateForensicArtifacts());
+              setIsScanning(false);
+              setCurrentView(AppView.FORENSICS);
+            }
+          ];
+          let step = 0;
+          const interval = setInterval(() => {
+            if (step < steps.length) { steps[step](); step++; } else { clearInterval(interval); }
+          }, 800);
+        };
+
+        const handleReset = () => {
+          setLogs([]);
+          setArtifacts([]);
+          setCurrentView(AppView.UPLOAD);
+        };
+
+        if (isScanning) {
+           const scanMessages = ["Initializing...", "Analyzing Logs...", "Parsing Shellbags...", "Checking USB...", "Scanning Docs...", "Finalizing..."];
+           return (
+             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+               <div className="max-w-md w-full text-center space-y-8">
+                 <div className="relative w-24 h-24 mx-auto">
+                   <div className="absolute inset-0 border-4 border-slate-800 rounded-full"></div>
+                   <div className="absolute inset-0 border-4 border-cyan-500 rounded-full border-t-transparent animate-spin"></div>
+                   <Activity className="absolute inset-0 m-auto w-10 h-10 text-cyan-400 animate-pulse" />
+                 </div>
+                 <div><h2 className="text-2xl font-bold text-white mb-2">Forensic Scan in Progress</h2><p className="text-cyan-400 font-mono text-sm">{scanMessages[scanStep]}</p></div>
+                 <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden"><div className="bg-cyan-500 h-full transition-all duration-500 ease-out" style={{ width: `${(scanStep / 5) * 100}%` }}></div></div>
+               </div>
+             </div>
+           );
+        }
+
+        if (currentView === AppView.UPLOAD && logs.length === 0) {
+          return (
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+              <div className="w-full max-w-4xl">
+                <header className="mb-12 text-center">
+                  <div className="flex items-center justify-center gap-3 mb-4"><Activity className="w-12 h-12 text-cyan-400" /><h1 className="text-4xl font-bold text-white">LogSentinel AI</h1></div>
+                  <p className="text-slate-400 text-lg">Forensic Analytics & Insights</p>
+                </header>
+                <FileUpload onUpload={handleFileUpload} onLoadDemo={handleLoadDemo} onStartForensicScan={handleStartForensicScan} />
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
+            <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col z-20`}>
+              <div className="p-4 flex items-center justify-between border-b border-slate-800 h-16">
+                {isSidebarOpen ? <div className="flex items-center gap-2 font-bold text-xl text-cyan-400"><Activity className="w-6 h-6" /><span>LogSentinel</span></div> : <Activity className="w-8 h-8 text-cyan-400 mx-auto" />}
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-500 hover:text-white lg:hidden">•</button>
+              </div>
+              <nav className="flex-1 p-4 space-y-2">
+                <NavButton active={currentView === AppView.DASHBOARD} onClick={() => setCurrentView(AppView.DASHBOARD)} icon={<LayoutDashboard />} label="Dashboard" isOpen={isSidebarOpen} />
+                {artifacts.length > 0 && <NavButton active={currentView === AppView.FORENSICS} onClick={() => setCurrentView(AppView.FORENSICS)} icon={<ScanSearch />} label="Forensics" isOpen={isSidebarOpen} extraClass="text-red-400 hover:text-red-300" />}
+                <NavButton active={currentView === AppView.ANALYSIS} onClick={() => setCurrentView(AppView.ANALYSIS)} icon={<BrainCircuit />} label="AI Analysis" isOpen={isSidebarOpen} />
+                <NavButton active={currentView === AppView.LOGS} onClick={() => setCurrentView(AppView.LOGS)} icon={<FileText />} label="Raw Logs" isOpen={isSidebarOpen} />
+              </nav>
+              <div className="p-4 border-t border-slate-800">
+                <button onClick={handleReset} className={`flex items-center gap-3 w-full p-3 rounded-lg text-red-400 hover:bg-red-950/30 transition-colors ${!isSidebarOpen && 'justify-center'}`}><LogOut className="w-5 h-5" />{isSidebarOpen && <span>Close</span>}</button>
+              </div>
+            </aside>
+            <main className="flex-1 overflow-auto bg-slate-950 relative">
+              <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10 flex items-center px-8 justify-between">
+                <h2 className="text-xl font-semibold text-white">{currentView === AppView.FORENSICS ? 'Digital Forensics Report' : currentView}</h2>
+                <div className="text-sm text-slate-400">{logs.length.toLocaleString()} events</div>
+              </header>
+              <div className="p-6 max-w-7xl mx-auto">
+                {currentView === AppView.DASHBOARD && <Dashboard logs={logs} />}
+                {currentView === AppView.ANALYSIS && <AIAnalysis logs={logs} artifacts={artifacts} />}
+                {currentView === AppView.LOGS && <LogViewer logs={logs} />}
+                {currentView === AppView.FORENSICS && <ForensicsView artifacts={artifacts} />}
+              </div>
+            </main>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
