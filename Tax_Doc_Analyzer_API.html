@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Tax Forensics Analyzer</title>
+    <title>AI Tax Doc Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.7.2/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -112,9 +112,9 @@ const initDB = () => {
     }
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => {
-      console.error('Error opening DB');
-      reject(false);
+    request.onerror = (event) => {
+      console.error('Error opening DB:', event.target.error);
+      reject(event.target.error);
     };
 
     request.onsuccess = (event) => {
@@ -171,92 +171,116 @@ const initDB = () => {
 const addFile = (metadata, chunks, groupName) => {
   return new Promise((resolve, reject) => {
     if (!db) return reject('DB not initialized');
-    
-    const transaction = db.transaction([FILES_STORE_NAME, CHUNKS_STORE_NAME], 'readwrite');
-    const fileStore = transaction.objectStore(FILES_STORE_NAME);
-    const chunkStore = transaction.objectStore(CHUNKS_STORE_NAME);
-    
-    fileStore.put({ ...metadata, groupName });
+    try {
+        const transaction = db.transaction([FILES_STORE_NAME, CHUNKS_STORE_NAME], 'readwrite');
+        const fileStore = transaction.objectStore(FILES_STORE_NAME);
+        const chunkStore = transaction.objectStore(CHUNKS_STORE_NAME);
+        
+        fileStore.put({ ...metadata, groupName });
 
-    chunks.forEach(chunk => {
-        chunkStore.put(chunk);
-    });
+        chunks.forEach(chunk => {
+            chunkStore.put(chunk);
+        });
 
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = (event) => reject(event.target.error);
+    } catch (err) {
+        reject(err);
+    }
   });
 };
 
 const getFilesByGroupName = (groupName) => {
     return new Promise((resolve, reject) => {
         if (!db) return reject('DB not initialized');
-        const transaction = db.transaction([FILES_STORE_NAME], 'readonly');
-        const store = transaction.objectStore(FILES_STORE_NAME);
-        const index = store.index('groupName');
-        const request = index.getAll(groupName);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        try {
+            const transaction = db.transaction([FILES_STORE_NAME], 'readonly');
+            const store = transaction.objectStore(FILES_STORE_NAME);
+            const index = store.index('groupName');
+            const request = index.getAll(groupName);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (event) => reject(event.target.error);
+            transaction.onerror = (event) => reject(event.target.error);
+        } catch (err) {
+            reject(err);
+        }
     });
 };
 
 const getChunksByFileName = (fileName) => {
     return new Promise((resolve, reject) => {
         if (!db) return reject('DB not initialized');
+        try {
+            const transaction = db.transaction([CHUNKS_STORE_NAME], 'readonly');
+            const store = transaction.objectStore(CHUNKS_STORE_NAME);
+            const index = store.index('fileName');
+            const request = index.getAll(fileName);
 
-        const transaction = db.transaction([CHUNKS_STORE_NAME], 'readonly');
-        const store = transaction.objectStore(CHUNKS_STORE_NAME);
-        const index = store.index('fileName');
-        const request = index.getAll(fileName);
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (event) => reject(event.target.error);
+            transaction.onerror = (event) => reject(event.target.error);
+        } catch(err) {
+            reject(err);
+        }
     });
 };
 
 const deleteFile = (fileName) => {
     return new Promise((resolve, reject) => {
       if (!db) return reject('DB not initialized');
-      
-      const transaction = db.transaction([FILES_STORE_NAME, CHUNKS_STORE_NAME], 'readwrite');
-      const fileStore = transaction.objectStore(FILES_STORE_NAME);
-      const chunkStore = transaction.objectStore(CHUNKS_STORE_NAME);
-      const chunkIndex = chunkStore.index('fileName');
+      try {
+          const transaction = db.transaction([FILES_STORE_NAME, CHUNKS_STORE_NAME], 'readwrite');
+          const fileStore = transaction.objectStore(FILES_STORE_NAME);
+          const chunkStore = transaction.objectStore(CHUNKS_STORE_NAME);
+          const chunkIndex = chunkStore.index('fileName');
 
-      fileStore.delete(fileName);
+          fileStore.delete(fileName);
 
-      const cursorRequest = chunkIndex.openCursor(IDBKeyRange.only(fileName));
-      cursorRequest.onsuccess = (event) => {
-        const cursor = event.target.result;
-        if (cursor) {
-            cursor.delete();
-            cursor.continue();
-        }
-      };
+          const cursorRequest = chunkIndex.openCursor(IDBKeyRange.only(fileName));
+          cursorRequest.onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (cursor) {
+                cursor.delete();
+                cursor.continue();
+            }
+          };
 
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = (event) => reject(event.target.error);
+      } catch (err) {
+          reject(err);
+      }
     });
 };
 
 const addSourceGroup = (group) => {
     return new Promise((resolve, reject) => {
       if (!db) return reject('DB not initialized');
-      const transaction = db.transaction([SOURCE_GROUPS_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
-      store.put(group);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
+      try {
+          const transaction = db.transaction([SOURCE_GROUPS_STORE_NAME], 'readwrite');
+          const store = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
+          store.put(group);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = (event) => reject(event.target.error);
+      } catch (err) {
+          reject(err);
+      }
     });
 };
 
 const getAllSourceGroups = () => {
     return new Promise((resolve, reject) => {
       if (!db) return reject('DB not initialized');
-      const transaction = db.transaction([SOURCE_GROUPS_STORE_NAME], 'readonly');
-      const store = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      try {
+          const transaction = db.transaction([SOURCE_GROUPS_STORE_NAME], 'readonly');
+          const store = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (event) => reject(event.target.error);
+          transaction.onerror = (event) => reject(event.target.error);
+      } catch (err) {
+          reject(err);
+      }
     });
 };
 
@@ -272,7 +296,7 @@ const deleteSourceGroup = (groupName) => {
             const store = transaction.objectStore(SOURCE_GROUPS_STORE_NAME);
             store.delete(groupName);
             transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
+            transaction.onerror = (event) => reject(event.target.error);
         } catch (error) {
             reject(error);
         }
@@ -282,39 +306,49 @@ const deleteSourceGroup = (groupName) => {
 const getAllTemplates = () => {
     return new Promise((resolve, reject) => {
       if (!db) return reject('DB not initialized');
+      try {
+          const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readonly');
+          const store = transaction.objectStore(TEMPLATES_STORE_NAME);
+          const request = store.getAll();
       
-      const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readonly');
-      const store = transaction.objectStore(TEMPLATES_STORE_NAME);
-      const request = store.getAll();
-  
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (event) => reject(event.target.error);
+          transaction.onerror = (event) => reject(event.target.error);
+      } catch (err) {
+          reject(err);
+      }
     });
 };
 
 const addTemplate = (template) => {
     return new Promise((resolve, reject) => {
       if (!db) return reject('DB not initialized');
+      try {
+          const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readwrite');
+          const store = transaction.objectStore(TEMPLATES_STORE_NAME);
+          store.put(template);
       
-      const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(TEMPLATES_STORE_NAME);
-      store.put(template);
-  
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = (event) => reject(event.target.error);
+      } catch (err) {
+          reject(err);
+      }
     });
 };
 
 const deleteTemplate = (templateName) => {
     return new Promise((resolve, reject) => {
       if (!db) return reject('DB not initialized');
+      try {
+          const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readwrite');
+          const store = transaction.objectStore(TEMPLATES_STORE_NAME);
+          store.delete(templateName);
       
-      const transaction = db.transaction([TEMPLATES_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(TEMPLATES_STORE_NAME);
-      store.delete(templateName);
-  
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = (event) => reject(event.target.error);
+      } catch (err) {
+          reject(err);
+      }
     });
 };
 
@@ -364,7 +398,7 @@ const sendMessageToChat = async (message) => {
         throw new Error(GEN_AI_ERROR_MESSAGE);
     }
 
-    const searchKeywords = ['최신', '트렌드', '뉴스', '현재', '세무조사', '최근 세법 개정'];
+    const searchKeywords = ['최신', '트렌드', '뉴스', '현재', '누가 이겼어', '최근 세법 개정'];
     const shouldUseSearch = searchKeywords.some(keyword => message.toLowerCase().includes(keyword));
     const genAI = getAi();
 
@@ -448,10 +482,13 @@ const searchInFiles = async (query, instruction, selectedFileNames) => {
         
         const baseInstruction = instruction.trim() !== '' 
             ? instruction 
-            : `당신은 Tax Forensics을 전문으로 다루는 지능형 검색 어시턴트입니다. 당신의 임무는 아래에 제공된 파일들의 문맥만을 기반으로 사용자의 질문에 답변하는 것입니다.
-분석을 위해서 외부 지식을 사용하셔도 되며, 문맥에서 답을 찾을 수 없는 경우, 명확하게 그렇게 밝히십시오.
+            : `당신은 Tax Doc를 전문으로 다루는 지능형 검색 어시턴트입니다. 당신의 임무는 아래에 제공된 파일들의 문맥만을 기반으로 사용자의 질문에 답변하는 것입니다.
+분석을 위해서 외부 지식을 사용하셔도 됩니다.
+문맥에서 답을 찾을 수 없는 경우, 명확하게 그렇게 밝히십시오.
 정보를 찾은 파일 이름을 인용하십시오.
 답변은 간결하게 Markdown으로 구성하고, 블렛과 번호 목록을 이용하세요.`;
+
+
         const answerPrompt = `
             사용자 질문: "${query}"
     
@@ -487,7 +524,7 @@ const Header = ({ onStartOver, onApiKeyClick }) => {
                     React.createElement('div', { className: "flex items-center cursor-pointer", onClick: onStartOver },
                         React.createElement(ScaleIcon, { className: "h-8 w-8 text-green-600" }),
                         React.createElement('h1', { className: "ml-2 text-2xl font-bold text-gray-800 hidden sm:block" },
-                            "AI Tax Forensics Analyzer"
+                            "AI Tax Doc Analyzer"
                         )
                     ),
                     React.createElement('nav', { className: "flex items-center space-x-2 md:space-x-4" },
@@ -700,8 +737,9 @@ const chunkText = (text, chunkSize = 2000, overlap = 200) => {
     return chunks;
 }
 
-const DEFAULT_INSTRUCTION = `당신은 Tax Forensics을 전문으로 다루는 지능형 검색 어시턴트입니다. 당신의 임무는 아래에 제공된 파일들의 문맥만을 기반으로 사용자의 질문에 답변하는 것입니다.
-분석을 위해서 외부 지식을 사용하셔도 ehlau, 문맥에서 답을 찾을 수 없는 경우, 명확하게 그렇게 밝히십시오.
+const DEFAULT_INSTRUCTION = `당신은 Tax Doc를 전문으로 다루는 지능형 검색 어시턴트입니다. 당신의 임무는 아래에 제공된 파일들의 문맥만을 기반으로 사용자의 질문에 답변하는 것입니다.
+분석을 위해서 외부 지식을 사용하셔도 됩니다.
+문맥에서 답을 찾을 수 없는 경우, 명확하게 그렇게 밝히십시오.
 정보를 찾은 파일 이름을 인용하십시오.
 답변은 간결하게 Markdown으로 구성하고, 블렛과 번호 목록을 이용하세요.`;
 
@@ -724,18 +762,25 @@ const FileSearch = () => {
 
     useEffect(() => {
         const loadInitialData = async () => {
-            await initDB();
-            let storedGroups = await getAllSourceGroups();
-            if (storedGroups.length === 0) {
-                const defaultGroupName = "기본 그룹";
-                await addSourceGroup({ name: defaultGroupName });
-                storedGroups = [{ name: defaultGroupName }];
+            try {
+                await initDB();
+                let storedGroups = await getAllSourceGroups();
+                if (storedGroups.length === 0) {
+                    const defaultGroupName = "기본 그룹";
+                    await addSourceGroup({ name: defaultGroupName });
+                    storedGroups = [{ name: defaultGroupName }];
+                }
+                setSourceGroups(storedGroups);
+                if (storedGroups.length > 0) {
+                    setSelectedGroupName(storedGroups[0].name);
+                }
+    
+                const storedTemplates = await getAllTemplates();
+                setTemplates(storedTemplates);
+            } catch (err) {
+                console.error("Failed to initialize and load data:", err);
+                setError("데이터베이스를 초기화할 수 없습니다. 브라우저가 IndexedDB를 지원하는지 확인하고 페이지를 새로고침하세요.");
             }
-            setSourceGroups(storedGroups);
-            setSelectedGroupName(storedGroups[0].name);
-
-            const storedTemplates = await getAllTemplates();
-            setTemplates(storedTemplates);
         };
 
         loadInitialData();
@@ -848,14 +893,19 @@ const FileSearch = () => {
 
     const handleDeleteFile = async (fileName) => {
         if (window.confirm(`'${fileName}' 소스를 정말로 삭제하시겠습니까?`)) {
-            await deleteFile(fileName);
-            const updatedFiles = await getFilesByGroupName(selectedGroupName);
-            setFiles(updatedFiles);
-            setSelectedFiles(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(fileName);
-                return newSet;
-            });
+            try {
+                await deleteFile(fileName);
+                const updatedFiles = await getFilesByGroupName(selectedGroupName);
+                setFiles(updatedFiles);
+                setSelectedFiles(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(fileName);
+                    return newSet;
+                });
+            } catch (err) {
+                console.error("Failed to delete file:", err);
+                setError("파일 삭제에 실패했습니다. 데이터베이스 오류가 발생할 수 있습니다.");
+            }
         }
     };
 
@@ -972,10 +1022,15 @@ const FileSearch = () => {
                 alert("같은 이름의 그룹이 이미 있습니다.");
                 return;
             }
-            await addSourceGroup({ name });
-            const updatedGroups = await getAllSourceGroups();
-            setSourceGroups(updatedGroups);
-            setSelectedGroupName(name);
+            try {
+                await addSourceGroup({ name });
+                const updatedGroups = await getAllSourceGroups();
+                setSourceGroups(updatedGroups);
+                setSelectedGroupName(name);
+            } catch (err) {
+                console.error("Failed to create group:", err);
+                setError("그룹 생성에 실패했습니다. 데이터베이스 오류가 발생할 수 있습니다.");
+            }
         } else if (name !== null) {
             alert("유효한 그룹 이름을 입력해야 합니다.");
         }
@@ -987,10 +1042,15 @@ const FileSearch = () => {
             return;
         }
         if (window.confirm(`'${selectedGroupName}' 그룹을 정말로 삭제하시겠습니까? 그룹 내의 모든 소스 파일이 영구적으로 삭제됩니다.`)) {
-            await deleteSourceGroup(selectedGroupName);
-            const updatedGroups = await getAllSourceGroups();
-            setSourceGroups(updatedGroups);
-            setSelectedGroupName(updatedGroups.length > 0 ? updatedGroups[0].name : '');
+            try {
+                await deleteSourceGroup(selectedGroupName);
+                const updatedGroups = await getAllSourceGroups();
+                setSourceGroups(updatedGroups);
+                setSelectedGroupName(updatedGroups.length > 0 ? updatedGroups[0].name : '');
+            } catch (err) {
+                console.error("Failed to delete group:", err);
+                setError("그룹 삭제에 실패했습니다. 데이터베이스 오류가 발생할 수 있습니다.");
+            }
         }
     };
 
@@ -1057,8 +1117,8 @@ const FileSearch = () => {
     return React.createElement(React.Fragment, null,
         React.createElement('div', { className: "bg-white rounded-xl shadow-lg p-8 max-w-7xl mx-auto w-full h-full flex flex-col" },
             React.createElement('div', { className: "text-center mb-10" },
-                React.createElement('h2', { className: "text-3xl font-extrabold text-gray-900" }, "AI Tax Forensicis Analyzer"),
-                React.createElement('p', { className: "mt-2 text-lg text-gray-600" }, "전산자료를 본인의 저장소(로컬, 클라우드)에 저장하고 지능형 검색을 통해 질문하세요.")
+                React.createElement('h2', { className: "text-3xl font-extrabold text-gray-900" }, "AI Tax Doc Analyzer"),
+                React.createElement('p', { className: "mt-2 text-lg text-gray-600" }, "Tax Doc를 본인의 저장소(로컬, 클라우드)에 저장하고 지능형 검색을 통해 질문하세요.")
             ),
             React.createElement('div', { className: "grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow min-h-0" },
                 React.createElement('div', { className: "lg:col-span-1 space-y-4 flex flex-col" },
@@ -1267,7 +1327,4 @@ root.render(
 );
     </script>
   </body>
-
 </html>
-
-
