@@ -1,420 +1,330 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LogSentinel AI - PC 사용기록 분석 및 포렌식</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              slate: {
-                850: '#1e293b',
-                900: '#0f172a',
-                950: '#020617',
-              },
-              cyan: {
-                450: '#15aecf',
-              }
-            },
-            fontFamily: {
-              sans: ['Pretendard', 'Inter', 'sans-serif'],
-              mono: ['Fira Code', 'monospace'],
-            },
-          },
-        },
-      }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-    <style>
-      body {
-        background-color: #0f172a;
-        color: #e2e8f0;
-        font-family: 'Pretendard', sans-serif;
-      }
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #1e293b; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #475569; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #64748b; 
-      }
-      /* Loading Error Style */
-      #error-display {
-        display: none;
-        padding: 20px;
-        background: #450a0a;
-        color: #fca5a5;
-        border: 1px solid #7f1d1d;
-        margin: 20px;
-        border-radius: 8px;
-        font-family: monospace;
-      }
-    </style>
-    <!-- 
-      CRITICAL FIX: 
-      Using 'deps=react@18.2.0' ensures all libraries share the exact same React instance.
-    -->
-    <script type="importmap">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LogSentinel AI - 포렌식 통합 분석기</title>
+  
+  <!-- 스타일 (Tailwind CSS) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 폰트 -->
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet" />
+
+  <!-- 필수 라이브러리 (CDN) -->
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js" crossorigin></script>
+  <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js" crossorigin></script>
+  <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js" crossorigin></script>
+  
+  <!-- Babel Standalone (JSX 컴파일러) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body { 
+      background-color: #020617; 
+      color: #e2e8f0; 
+      font-family: 'Pretendard', sans-serif; 
+    }
+    /* 스크롤바 커스텀 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+<script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "recharts": "https://esm.sh/recharts@2.12.3?deps=react@18.2.0,react-dom@18.2.0",
-    "lucide-react": "https://esm.sh/lucide-react@0.344.0?deps=react@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai@0.1.1",
-    "react-markdown": "https://esm.sh/react-markdown@9.0.1?deps=react@18.2.0",
+    "react": "https://esm.sh/react@^19.2.1",
     "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
-    "react/": "https://esm.sh/react@^19.2.1/"
+    "react/": "https://esm.sh/react@^19.2.1/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
+    "recharts": "https://esm.sh/recharts@^3.5.1"
   }
 }
 </script>
 </head>
-  <body>
-    <div id="error-display"></div>
-    <div id="root"></div>
+<body>
+  <div id="root"></div>
 
-    <!-- Error Handler Script -->
-    <script>
-      window.onerror = function(msg, url, line, col, error) {
-        const el = document.getElementById('error-display');
-        if (el) {
-          el.style.display = 'block';
-          el.innerHTML = `<strong>Error:</strong> ${msg}<br><small>${url}:${line}:${col}</small>`;
-        }
-        return false;
-      };
-    </script>
+  <!-- 메인 스크립트 -->
+  <script type="text/babel">
+    /*******************************************************
+     * 1. 초기화 및 유틸리티
+     *******************************************************/
+    // React & Recharts 전역 객체 매핑
+    const { useState, useEffect, useMemo, useRef } = React;
+    const { 
+      BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip: RechartsTooltip, ResponsiveContainer, 
+      PieChart, Pie, Cell, LineChart, Line 
+    } = Recharts;
+    
+    // Lucide 아이콘 매핑
+    const { 
+      Activity, BarChart2, FileText, BrainCircuit, UploadCloud, LogOut, 
+      LayoutDashboard, ScanSearch, Loader2, Play, FileJson, AlertCircle, 
+      Download, Terminal, Clock, CheckCircle, AlertTriangle, Coffee,
+      Usb, FolderOpen, ShieldAlert, Search, Filter, ArrowUp, ArrowDown,
+      Send, Bot, User, Sparkles
+    } = LucideReact;
 
-    <script type="text/babel" data-presets="react,typescript" data-type="module">
-      import React, { useState, useEffect, useRef, useMemo } from 'react';
-      import ReactDOM from 'react-dom/client';
-      import { 
-        BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-        PieChart, Pie, Cell, LineChart, Line 
-      } from 'recharts';
-      import { 
-        Activity, BarChart2, FileText, BrainCircuit, UploadCloud, LogOut, 
-        LayoutDashboard, ScanSearch, Loader2, Play, FileJson, AlertCircle, 
-        Download, Terminal, Clock, CheckCircle, AlertTriangle, Coffee,
-        Send, Bot, User, Sparkles, Search, Filter, ArrowUp, ArrowDown,
-        Usb, FolderOpen, ShieldAlert
-      } from 'lucide-react';
-      import { GoogleGenAI } from '@google/genai';
-      import ReactMarkdown from 'react-markdown';
+    // 환경 변수 안전 장치
+    window.process = { env: { NODE_ENV: 'production' } };
 
-      // ----------------------------------------------------------------------
-      // TYPES
-      // ----------------------------------------------------------------------
+    /*******************************************************
+     * 2. 타입 정의 (Types & Enums)
+     *******************************************************/
+    const AppView = {
+      UPLOAD: 'UPLOAD',
+      DASHBOARD: 'DASHBOARD',
+      ANALYSIS: 'ANALYSIS',
+      LOGS: 'LOGS',
+      FORENSICS: 'FORENSICS'
+    };
+
+    const LogCategory = {
+      PRODUCTIVITY: 'Productivity',
+      ENTERTAINMENT: 'Entertainment',
+      SYSTEM: 'System',
+      COMMUNICATION: 'Communication',
+      DEVELOPMENT: 'Development',
+      UNCATEGORIZED: 'Uncategorized'
+    };
+
+    const ArtifactType = {
+      USB_DEVICE: 'USB_DEVICE',
+      RECENT_DOC: 'RECENT_DOC',
+      SHELLBAG: 'SHELLBAG'
+    };
+
+    /*******************************************************
+     * 3. 서비스 (Mock Data & AI)
+     *******************************************************/
+    const generateMockData = () => {
+      const apps = [
+        { name: 'VS Code', category: LogCategory.DEVELOPMENT },
+        { name: 'Google Chrome', category: LogCategory.UNCATEGORIZED },
+        { name: 'Slack', category: LogCategory.COMMUNICATION },
+        { name: 'Spotify', category: LogCategory.ENTERTAINMENT },
+        { name: 'Zoom', category: LogCategory.COMMUNICATION },
+        { name: 'Figma', category: LogCategory.PRODUCTIVITY },
+        { name: 'Terminal', category: LogCategory.DEVELOPMENT },
+        { name: 'System Settings', category: LogCategory.SYSTEM },
+        { name: 'Discord', category: LogCategory.COMMUNICATION },
+        { name: 'Steam', category: LogCategory.ENTERTAINMENT },
+      ];
+
+      const logs = [];
+      const now = new Date();
       
-      // Mock process.env for the browser
-      window.process = { env: { API_KEY: '' } };
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(now);
+        day.setDate(day.getDate() - i);
+        const entriesCount = Math.floor(Math.random() * 20) + 20;
+        let currentTime = new Date(day);
+        currentTime.setHours(9, 0, 0, 0);
 
-      const AppView = {
-        UPLOAD: 'UPLOAD',
-        DASHBOARD: 'DASHBOARD',
-        ANALYSIS: 'ANALYSIS',
-        LOGS: 'LOGS',
-        FORENSICS: 'FORENSICS'
-      };
+        for (let j = 0; j < entriesCount; j++) {
+          const app = apps[Math.floor(Math.random() * apps.length)];
+          const duration = Math.floor(Math.random() * 1800) + 60;
+          currentTime = new Date(currentTime.getTime() + duration * 1000 + Math.random() * 60000);
 
-      const LogCategory = {
-        PRODUCTIVITY: '생산성',
-        ENTERTAINMENT: '엔터테인먼트',
-        SYSTEM: '시스템',
-        COMMUNICATION: '커뮤니케이션',
-        DEVELOPMENT: '개발',
-        UNCATEGORIZED: '기타'
-      };
-
-      const ArtifactType = {
-        USB_DEVICE: 'USB_DEVICE',
-        RECENT_DOC: 'RECENT_DOC',
-        SHELLBAG: 'SHELLBAG'
-      };
-
-      // ----------------------------------------------------------------------
-      // SERVICES: Mock Data
-      // ----------------------------------------------------------------------
-
-      const generateMockData = () => {
-        const apps = [
-          { name: 'VS Code', category: LogCategory.DEVELOPMENT },
-          { name: 'Google Chrome', category: LogCategory.UNCATEGORIZED },
-          { name: 'Slack', category: LogCategory.COMMUNICATION },
-          { name: 'Spotify', category: LogCategory.ENTERTAINMENT },
-          { name: 'Zoom', category: LogCategory.COMMUNICATION },
-          { name: 'Figma', category: LogCategory.PRODUCTIVITY },
-          { name: 'Terminal', category: LogCategory.DEVELOPMENT },
-          { name: '설정', category: LogCategory.SYSTEM },
-          { name: 'Discord', category: LogCategory.COMMUNICATION },
-          { name: 'Steam', category: LogCategory.ENTERTAINMENT },
-        ];
-
-        const logs = [];
-        const now = new Date();
-        
-        for (let i = 0; i < 7; i++) {
-          const day = new Date(now);
-          day.setDate(day.getDate() - i);
-          const entriesCount = Math.floor(Math.random() * 20) + 20;
-          let currentTime = new Date(day);
-          currentTime.setHours(9, 0, 0, 0);
-
-          for (let j = 0; j < entriesCount; j++) {
-            const app = apps[Math.floor(Math.random() * apps.length)];
-            const duration = Math.floor(Math.random() * 1800) + 60;
-            currentTime = new Date(currentTime.getTime() + duration * 1000 + Math.random() * 60000);
-
-            let category = app.category;
-            let title = `Main Window - ${app.name}`;
-            
-            if (app.name === 'Google Chrome') {
-              const rand = Math.random();
-              if (rand > 0.7) {
-                title = 'Netflix - TV 프로그램 시청';
-                category = LogCategory.ENTERTAINMENT;
-              } else if (rand > 0.4) {
-                title = 'GitHub - 풀 리퀘스트 #402 검토';
-                category = LogCategory.DEVELOPMENT;
-              } else {
-                title = 'Google 검색 - React Hooks 최적화';
-                category = LogCategory.PRODUCTIVITY;
-              }
-            } else if (app.name === 'VS Code') {
-              title = `index.tsx - 프로젝트 알파 수정 중`;
-            } else if (app.name === 'Slack') {
-              title = `일반 - #dev-team`;
-            }
-
-            logs.push({
-              id: Math.random().toString(36).substr(2, 9),
-              timestamp: currentTime.toISOString(),
-              application: app.name,
-              windowTitle: title,
-              durationSeconds: duration,
-              category: category
-            });
-          }
-        }
-        return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      };
-
-      const generateForensicArtifacts = () => {
-        const artifacts = [];
-        const now = new Date();
-
-        const usbDevices = [
-          { name: 'Samsung T7 Shield', serial: 'S5T7NS0R123456', risk: 'LOW' },
-          { name: 'Sandisk Cruzer Blade', serial: '4C530001290812111023', risk: 'MEDIUM' },
-          { name: 'Unknown Mass Storage', serial: 'Generic-123901', risk: 'HIGH' }
-        ];
-
-        usbDevices.forEach(device => {
-          const date = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);
-          artifacts.push({
-            id: Math.random().toString(36).substr(2, 9),
-            timestamp: date.toISOString(),
-            type: ArtifactType.USB_DEVICE,
-            name: device.name,
-            path: `USBSTOR\\Disk&Ven_${device.name.split(' ')[0]}&Prod_Storage\\${device.serial}`,
-            action: '장치 연결됨',
-            riskLevel: device.risk
-          });
-        });
-
-        const docs = [
-          { name: '4분기_재무_보고서.xlsx', path: 'C:\\Users\\Admin\\Documents\\Finance', risk: 'MEDIUM' },
-          { name: '프로젝트_알파_기밀.docx', path: 'C:\\Users\\Admin\\Desktop\\Private', risk: 'HIGH' },
-          { name: '이력서_2025.pdf', path: 'C:\\Users\\Admin\\Downloads', risk: 'LOW' },
-          { name: '비밀번호_모음.txt', path: 'D:\\Backups', risk: 'HIGH' },
-          { name: '주간_회의록.txt', path: 'C:\\Users\\Admin\\Desktop', risk: 'LOW' }
-        ];
-
-        docs.forEach(doc => {
-          const date = new Date(now.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000);
-          artifacts.push({
-            id: Math.random().toString(36).substr(2, 9),
-            timestamp: date.toISOString(),
-            type: ArtifactType.RECENT_DOC,
-            name: doc.name,
-            path: doc.path,
-            action: '파일 접근 (LNK)',
-            riskLevel: doc.risk
-          });
-        });
-
-        const folders = [
-          { name: '사진', path: 'C:\\Users\\Admin\\Pictures', risk: 'LOW' },
-          { name: '숨겨진_프로젝트', path: 'E:\\Hidden_Project', risk: 'HIGH' },
-          { name: 'System32', path: 'C:\\Windows\\System32', risk: 'MEDIUM' },
-          { name: '다운로드', path: 'C:\\Users\\Admin\\Downloads', risk: 'LOW' }
-        ];
-
-        folders.forEach(folder => {
-          const date = new Date(now.getTime() - Math.random() * 60 * 24 * 60 * 60 * 1000);
-          artifacts.push({
-            id: Math.random().toString(36).substr(2, 9),
-            timestamp: date.toISOString(),
-            type: ArtifactType.SHELLBAG,
-            name: folder.name,
-            path: folder.path,
-            action: '폴더 탐색',
-            riskLevel: folder.risk
-          });
-        });
-
-        return artifacts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      };
-
-      // ----------------------------------------------------------------------
-      // SERVICES: Gemini
-      // ----------------------------------------------------------------------
-      
-      const summarizeLogsForContext = (logs, artifacts = []) => {
-        const recentLogs = logs.slice(0, 30).map(l => 
-          `[${l.timestamp.split('T')[1].split('.')[0]}] 앱: ${l.application} | 제목: ${l.windowTitle} | 시간: ${Math.round(l.durationSeconds / 60)}분`
-        ).join('\n');
-
-        const appStats = {};
-        logs.forEach(l => {
-          appStats[l.application] = (appStats[l.application] || 0) + l.durationSeconds;
-        });
-
-        const summaryStats = Object.entries(appStats)
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, 10)
-          .map(([name, dur]) => `${name}: ${(dur / 3600).toFixed(1)}시간`)
-          .join(', ');
-
-        const usbArtifacts = artifacts.filter(a => a.type === ArtifactType.USB_DEVICE).map(a => `- ${a.name} (S/N: ${a.path}) 연결 시간: ${a.timestamp}`).join('\n');
-        const recentDocs = artifacts.filter(a => a.type === ArtifactType.RECENT_DOC && a.riskLevel === 'HIGH').map(a => `- 고위험 파일: ${a.name} 경로: ${a.path}`).join('\n');
-
-        return `
-데이터 요약:
-사용 시간 상위 앱: ${summaryStats}
-
-포렌식 주요사항:
-USB 연결 이력:
-${usbArtifacts || '감지되지 않음.'}
-
-민감한 파일 접근 (최근 문서):
-${recentDocs || '고위험 파일 감지되지 않음.'}
-
-최근 상세 활동 로그 (마지막 30개):
-${recentLogs}
-        `;
-      };
-
-      const analyzeLogsWithGemini = async (logs, artifacts, userPrompt) => {
-        const key = process.env.API_KEY || localStorage.getItem('GEMINI_API_KEY');
-        if (!key) {
-          return "API 키가 없습니다. 브라우저 콘솔에서 `localStorage.setItem('GEMINI_API_KEY', 'your-key')`를 입력하거나 환경 변수를 확인해주세요.";
-        }
-        
-        const ai = new GoogleGenAI({ apiKey: key });
-        const contextData = summarizeLogsForContext(logs, artifacts);
-        const systemInstruction = `
-          당신은 디지털 포렌식 및 생산성 분석 전문가입니다. 
-          사용자의 PC 사용 로그와 포렌식 아티팩트(USB 기록, 쉘백, 최근 문서 등)를 분석하고 있습니다.
+          let category = app.category;
+          let title = `메인 윈도우 - ${app.name}`;
           
-          다음 내용을 바탕으로 인사이트를 제공하세요:
-          1. 생산성 트렌드 분석.
-          2. 데이터 유출 위험 (USB 사용 + 민감한 파일 접근).
-          3. 이상 징후 (업무 시간 외 사용, 의심스러운 폴더 접근 등).
-          4. 위협 점수 (0-100점) 추정.
-
-          반드시 **한국어**로 답변하세요. 전문적이고 간결하게 마크다운 형식을 사용하여 답변하세요.
-        `;
-
-        try {
-          const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: `분석 데이터:\n${contextData}\n\n사용자 질문: ${userPrompt}`,
-            config: { systemInstruction: systemInstruction }
-          });
-          return response.text || "분석 결과를 생성하지 못했습니다.";
-        } catch (error) {
-          console.error("Gemini API Error:", error);
-          return "AI 서비스와 통신 중 오류가 발생했습니다. API 키를 확인해주세요.";
-        }
-      };
-
-      // ----------------------------------------------------------------------
-      // COMPONENTS
-      // ----------------------------------------------------------------------
-
-      const FileUpload = ({ onUpload, onLoadDemo, onStartForensicScan }) => {
-        const fileInputRef = useRef(null);
-        const [error, setError] = useState(null);
-        const [isDragging, setIsDragging] = useState(false);
-
-        const parseJSON = (content) => {
-          try {
-            const data = JSON.parse(content);
-            if (Array.isArray(data)) {
-              // Standard Logs
-              onUpload(data.map(item => ({
-                ...item,
-                id: item.id || Math.random().toString(),
-                category: item.category || LogCategory.UNCATEGORIZED
-              })));
-            } else if (data.logs || data.artifacts) {
-              // Full Export
-              onUpload(data.logs || [], data.artifacts || []);
+          if (app.name === 'Google Chrome') {
+            const rand = Math.random();
+            if (rand > 0.7) {
+              title = 'Netflix - 온라인 TV 쇼 시청';
+              category = LogCategory.ENTERTAINMENT;
+            } else if (rand > 0.4) {
+              title = 'GitHub - Pull Request #402 검토';
+              category = LogCategory.DEVELOPMENT;
             } else {
-              setError("유효하지 않은 JSON 형식입니다.");
+              title = 'Google 검색 - React Hooks 최적화';
+              category = LogCategory.PRODUCTIVITY;
             }
-          } catch (e) {
-            setError("JSON 파일 파싱 실패.");
+          } else if (app.name === 'VS Code') {
+            title = `index.tsx - 프로젝트 알파 수정 중`;
           }
-        };
 
-        const handleDownloadScript = () => {
-          const scriptContent = `
+          logs.push({
+            id: Math.random().toString(36).substr(2, 9),
+            timestamp: currentTime.toISOString(),
+            application: app.name,
+            windowTitle: title,
+            durationSeconds: duration,
+            category: category
+          });
+        }
+      }
+      return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    };
+
+    const generateForensicArtifacts = () => {
+      const artifacts = [];
+      const now = new Date();
+
+      // 1. USB History
+      const usbDevices = [
+        { name: 'Samsung T7 Shield', serial: 'S5T7NS0R123456', risk: 'LOW' },
+        { name: 'Sandisk Cruzer Blade', serial: '4C530001290812111023', risk: 'MEDIUM' },
+        { name: 'Unknown Mass Storage', serial: 'Generic-123901', risk: 'HIGH' }
+      ];
+
+      usbDevices.forEach(device => {
+        const date = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);
+        artifacts.push({
+          id: Math.random().toString(36).substr(2, 9),
+          timestamp: date.toISOString(),
+          type: ArtifactType.USB_DEVICE,
+          name: device.name,
+          path: `USBSTOR\\Disk&Ven_${device.name.split(' ')[0]}&Prod_Storage\\${device.serial}`,
+          action: '장치 연결됨',
+          riskLevel: device.risk
+        });
+      });
+
+      // 2. Recent Docs
+      const docs = [
+        { name: '4분기_재무_보고서.xlsx', path: 'C:\\Users\\Admin\\Documents\\Finance', risk: 'MEDIUM' },
+        { name: '프로젝트_알파_비밀키.docx', path: 'C:\\Users\\Admin\\Desktop\\Private', risk: 'HIGH' },
+        { name: '이력서_2025.pdf', path: 'C:\\Users\\Admin\\Downloads', risk: 'LOW' },
+        { name: '비밀번호_모음.txt', path: 'D:\\Backups', risk: 'HIGH' },
+        { name: '회의록.txt', path: 'C:\\Users\\Admin\\Desktop', risk: 'LOW' }
+      ];
+
+      docs.forEach(doc => {
+        const date = new Date(now.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000);
+        artifacts.push({
+          id: Math.random().toString(36).substr(2, 9),
+          timestamp: date.toISOString(),
+          type: ArtifactType.RECENT_DOC,
+          name: doc.name,
+          path: doc.path,
+          action: '파일 접근 (LNK)',
+          riskLevel: doc.risk
+        });
+      });
+
+      // 3. Shellbags
+      const folders = [
+        { name: '내 사진', path: 'C:\\Users\\Admin\\Pictures', risk: 'LOW' },
+        { name: '숨겨진_프로젝트', path: 'E:\\Hidden_Project', risk: 'HIGH' },
+        { name: 'System32', path: 'C:\\Windows\\System32', risk: 'MEDIUM' },
+        { name: '다운로드', path: 'C:\\Users\\Admin\\Downloads', risk: 'LOW' }
+      ];
+
+      folders.forEach(folder => {
+        const date = new Date(now.getTime() - Math.random() * 60 * 24 * 60 * 60 * 1000);
+        artifacts.push({
+          id: Math.random().toString(36).substr(2, 9),
+          timestamp: date.toISOString(),
+          type: ArtifactType.SHELLBAG,
+          name: folder.name,
+          path: folder.path,
+          action: '폴더 탐색',
+          riskLevel: folder.risk
+        });
+      });
+
+      return artifacts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    };
+
+    // AI Service (Fetch 기반)
+    const analyzeLogsWithGemini = async (logs, artifacts, userPrompt) => {
+      // API Key가 없으면 안내 메시지 반환
+      const API_KEY = ""; // 여기에 API 키를 입력하거나, 실제 환경에서는 환경변수 사용
+      
+      if (!API_KEY && (!window.process || !window.process.env.API_KEY)) {
+        return "⚠️ API 키가 설정되지 않았습니다. 데모 모드에서는 실제 AI 분석이 제한됩니다.\n\n(개발자 도구에서 API 키를 설정하거나 코드를 수정해주세요.)";
+      }
+      
+      const key = API_KEY || window.process.env.API_KEY;
+
+      const summary = `
+      [로그 요약]
+      총 로그 수: ${logs.length}
+      주요 앱: ${logs.slice(0,5).map(l => l.application).join(', ')}
+      
+      [포렌식 아티팩트]
+      USB 장치: ${artifacts.filter(a => a.type === ArtifactType.USB_DEVICE).length}개
+      고위험 파일 접근: ${artifacts.filter(a => a.riskLevel === 'HIGH').length}건
+      `;
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `당신은 디지털 포렌식 전문가입니다. 다음 데이터를 바탕으로 사용자의 질문에 답하세요.\n\n데이터:\n${summary}\n\n사용자 질문: ${userPrompt}`
+              }]
+            }]
+          })
+        });
+        const data = await response.json();
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || "분석 결과를 생성할 수 없습니다.";
+      } catch (e) {
+        return "AI 서비스 연결 중 오류가 발생했습니다: " + e.message;
+      }
+    };
+
+    /*******************************************************
+     * 4. 컴포넌트 정의
+     *******************************************************/
+
+    // --- FileUpload ---
+    const FileUpload = ({ onUpload, onLoadDemo, onStartForensicScan }) => {
+      const fileInputRef = useRef(null);
+      const [error, setError] = useState(null);
+      const [isDragging, setIsDragging] = useState(false);
+
+      const handleDownloadScript = () => {
+        const scriptContent = `
 # LogSentinel AI - 포렌식 데이터 수집 스크립트
+# 이 스크립트를 실행하여 'forensics_data.json'을 생성한 후 웹 앱에 업로드하세요.
+
 $ErrorActionPreference = "SilentlyContinue"
 Write-Host "포렌식 데이터 수집을 시작합니다..." -ForegroundColor Cyan
-$data = @{ logs = @(); artifacts = @() }
 
-# 1. 최근 문서 (Recent Docs)
+$data = @{
+    logs = @()
+    artifacts = @()
+}
+
+# 1. 최근 문서 수집 (Recent 폴더)
 Write-Host "[-] 최근 문서 스캔 중..."
 $recentPath = "$env:APPDATA\\Microsoft\\Windows\\Recent"
 if (Test-Path $recentPath) {
-    Get-ChildItem $recentPath -File | Select-Object -First 50 | ForEach-Object {
+    $recentFiles = Get-ChildItem $recentPath -File | Select-Object -First 50
+    foreach ($item in $recentFiles) {
         $data.artifacts += @{
             id = [Guid]::NewGuid().ToString()
-            timestamp = $_.LastAccessTime.ToString("o")
+            timestamp = $item.LastAccessTime.ToString("o")
             type = "RECENT_DOC"
-            name = $_.Name
-            path = $_.FullName
+            name = $item.Name
+            path = $item.FullName
             action = "파일 접근 (LNK)"
             riskLevel = "UNKNOWN"
         }
     }
 }
 
-# 2. USB 장치 (USB Devices)
-Write-Host "[-] USB 연결 기록 스캔 중..."
-Get-PnpDevice -Class 'USB' -Status OK | Where-Object { $_.FriendlyName -notmatch 'Hub|Controller|Composite' } | ForEach-Object {
+# 2. USB 기록 수집
+Write-Host "[-] USB 장치 스캔 중..."
+$usbDevices = Get-PnpDevice -Class 'USB' -Status OK | Where-Object { $_.FriendlyName -notmatch 'Hub|Controller|Composite' }
+foreach ($dev in $usbDevices) {
     $data.artifacts += @{
         id = [Guid]::NewGuid().ToString()
         timestamp = (Get-Date).ToString("o")
         type = "USB_DEVICE"
-        name = $_.FriendlyName
-        path = $_.InstanceId
-        action = "장치 연결됨"
+        name = $dev.FriendlyName
+        path = $dev.InstanceId
+        action = "장치 연결 기록"
         riskLevel = "UNKNOWN"
     }
 }
@@ -424,480 +334,429 @@ $data | ConvertTo-Json -Depth 4 | Out-File $outFile -Encoding utf8
 Write-Host "[+] 수집 완료! '$outFile' 파일을 LogSentinel에 업로드하세요." -ForegroundColor Green
 Start-Sleep -Seconds 2
 `;
-          const blob = new Blob([scriptContent], { type: 'text/plain' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'collect_data.ps1';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        };
+        const blob = new Blob([scriptContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'collect_data.ps1';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
 
-        return (
-          <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-8 w-full shadow-2xl">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div 
-                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative ${isDragging ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/50'}`}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => parseJSON(ev.target.result);
-                    reader.readAsText(file);
-                  }
-                }}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input type="file" ref={fileInputRef} onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => parseJSON(ev.target.result);
-                    reader.readAsText(file);
-                  }
-                }} accept=".json" className="hidden" />
-                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-cyan-400">
-                  <UploadCloud className="w-8 h-8" />
+      const handleFile = (content) => {
+        try {
+          const data = JSON.parse(content);
+          if (Array.isArray(data)) {
+            // 단순 로그 배열
+            onUpload(data, []);
+          } else if (data.logs || data.artifacts) {
+            // 통합 포렌식 데이터
+            onUpload(data.logs || [], data.artifacts || []);
+          } else {
+            setError("올바르지 않은 JSON 형식입니다.");
+          }
+        } catch (e) {
+          setError("파일 파싱 실패: " + e.message);
+        }
+      };
+
+      return (
+        <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-8 w-full shadow-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div 
+              className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative
+                ${isDragging ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/50'}
+              `}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => handleFile(ev.target.result);
+                  reader.readAsText(file);
+                }
+              }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input type="file" ref={fileInputRef} onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => handleFile(ev.target.result);
+                  reader.readAsText(file);
+                }
+              }} accept=".json" className="hidden" />
+              <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-cyan-400">
+                <UploadCloud className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">데이터 업로드</h3>
+              <p className="text-slate-400 mb-4">로그 파일 또는 수집된 JSON 드래그 앤 드롭</p>
+              {error && <div className="text-red-400 text-sm mt-2">{error}</div>}
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <div className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
+                <div className="flex items-center gap-3 mb-3">
+                  <Terminal className="w-5 h-5 text-green-400" />
+                  <h3 className="text-lg font-semibold text-white">실제 PC 데이터 분석</h3>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">데이터 업로드</h3>
-                <p className="text-slate-400 mb-4"><code>.json</code> 파일을 드래그 앤 드롭하세요</p>
-                {error && (
-                  <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 text-red-400 bg-red-950/90 px-4 py-2 rounded-lg border border-red-900/50">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm">{error}</span>
-                  </div>
-                )}
+                <p className="text-slate-400 text-xs mb-4">
+                  브라우저 보안으로 인해 PC 내부 파일에 직접 접근할 수 없습니다. 수집 스크립트를 사용하세요.
+                </p>
+                <button 
+                  onClick={handleDownloadScript}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg"
+                >
+                  <Download className="w-4 h-4" />
+                  수집 스크립트 다운로드 (PowerShell)
+                </button>
               </div>
 
-              <div className="flex flex-col gap-6">
-                <div className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Terminal className="w-5 h-5 text-green-400" />
-                    <h3 className="text-lg font-semibold text-white">실제 PC 데이터 분석</h3>
-                  </div>
-                  <p className="text-slate-400 text-xs mb-4">대상 PC에서 수집 스크립트를 실행하여 데이터를 추출합니다.</p>
-                  <button onClick={handleDownloadScript} className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors">
-                    <Download className="w-4 h-4" />
-                    수집 스크립트 다운로드
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  <button onClick={onStartForensicScan} className="w-full inline-flex items-center justify-center px-6 py-3 font-bold text-white transition-all bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg hover:from-cyan-500 hover:to-blue-500">
-                    <ScanSearch className="w-5 h-5 mr-2" />
-                    포렌식 스캔 시뮬레이션
-                  </button>
-                  <button onClick={onLoadDemo} className="w-full inline-flex items-center justify-center px-6 py-3 font-medium text-slate-400 transition-all hover:bg-slate-800 rounded-lg border border-transparent hover:border-slate-700">
-                    <Play className="w-4 h-4 mr-2" />
-                    데모 데이터 로드
-                  </button>
-                </div>
+              <div className="space-y-3">
+                <button 
+                  onClick={onStartForensicScan}
+                  className="w-full flex items-center justify-center px-6 py-3 font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg hover:from-cyan-500 hover:to-blue-500"
+                >
+                  <ScanSearch className="w-5 h-5 mr-2" />
+                  포렌식 정밀 스캔 시뮬레이션
+                </button>
+                <button 
+                  onClick={onLoadDemo}
+                  className="w-full flex items-center justify-center px-6 py-3 font-medium text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent hover:border-slate-700"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  데모 데이터 로드
+                </button>
               </div>
             </div>
           </div>
-        );
-      };
+        </div>
+      );
+    };
 
-      const ForensicsView = ({ artifacts }) => {
-        const [activeTab, setActiveTab] = useState('ALL');
-        const [searchTerm, setSearchTerm] = useState('');
+    // --- Dashboard ---
+    const Dashboard = ({ logs }) => {
+      const stats = useMemo(() => {
+        if (!logs.length) return null;
+        const totalDuration = logs.reduce((acc, log) => acc + log.durationSeconds, 0);
+        const totalHours = (totalDuration / 3600).toFixed(1);
 
-        const filtered = artifacts.filter(item => {
-          const matchesTab = activeTab === 'ALL' || item.type === activeTab;
-          const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.path.toLowerCase().includes(searchTerm.toLowerCase());
-          return matchesTab && matchesSearch;
+        const appMap = {};
+        logs.forEach(log => {
+          appMap[log.application] = (appMap[log.application] || 0) + log.durationSeconds;
         });
 
-        const getIcon = (type) => {
-          switch (type) {
-            case ArtifactType.USB_DEVICE: return <Usb className="w-4 h-4" />;
-            case ArtifactType.RECENT_DOC: return <FileText className="w-4 h-4" />;
-            case ArtifactType.SHELLBAG: return <FolderOpen className="w-4 h-4" />;
-            default: return <AlertTriangle className="w-4 h-4" />;
-          }
-        };
+        const topApps = Object.entries(appMap)
+          .map(([name, duration]) => ({ name, duration: Math.round(duration / 60) }))
+          .sort((a, b) => b.duration - a.duration)
+          .slice(0, 5);
 
-        const getRiskColor = (risk) => {
-          switch (risk) {
-            case 'HIGH': return 'text-red-400 bg-red-500/10 border-red-500/20';
-            case 'MEDIUM': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-            default: return 'text-slate-400 bg-slate-500/10 border-slate-500/20';
-          }
-        };
+        const catMap = {};
+        logs.forEach(log => {
+          catMap[log.category] = (catMap[log.category] || 0) + log.durationSeconds;
+        });
+        const categoryData = Object.entries(catMap)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
 
-        const getRiskLabel = (risk) => {
-          switch (risk) {
-            case 'HIGH': return '높음';
-            case 'MEDIUM': return '중간';
-            case 'LOW': return '낮음';
-            default: return '미확인';
-          }
-        };
+        const dateMap = {};
+        logs.forEach(log => {
+          const date = log.timestamp.split('T')[0];
+          dateMap[date] = (dateMap[date] || 0) + log.durationSeconds;
+        });
+        const activityData = Object.entries(dateMap)
+          .map(([date, seconds]) => ({ date, hours: parseFloat((seconds / 3600).toFixed(1)) }))
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        const getTabLabel = (tab) => {
-            switch(tab) {
-                case 'ALL': return '전체 항목';
-                case ArtifactType.USB_DEVICE: return 'USB 장치';
-                case ArtifactType.RECENT_DOC: return '최근 문서';
-                case ArtifactType.SHELLBAG: return '폴더(Shellbag)';
-                default: return tab;
-            }
-        };
+        return { totalHours, topApps, categoryData, activityData };
+      }, [logs]);
 
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
-                <div><p className="text-slate-400 text-xs font-bold uppercase">USB 연결 이력</p><h3 className="text-2xl font-bold text-white">{artifacts.filter(a => a.type === ArtifactType.USB_DEVICE).length}</h3></div>
-                <div className="w-12 h-12 bg-cyan-500/10 text-cyan-400 rounded-lg flex items-center justify-center"><Usb className="w-6 h-6" /></div>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
-                <div><p className="text-slate-400 text-xs font-bold uppercase">최근 접근 파일</p><h3 className="text-2xl font-bold text-white">{artifacts.filter(a => a.type === ArtifactType.RECENT_DOC).length}</h3></div>
-                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-lg flex items-center justify-center"><FileText className="w-6 h-6" /></div>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
-                <div><p className="text-slate-400 text-xs font-bold uppercase">고위험 항목</p><h3 className="text-2xl font-bold text-red-500">{artifacts.filter(a => a.riskLevel === 'HIGH').length}</h3></div>
-                <div className="w-12 h-12 bg-red-500/10 text-red-400 rounded-lg flex items-center justify-center"><ShieldAlert className="w-6 h-6" /></div>
-              </div>
+      if (!stats) return <div className="text-white">데이터가 없습니다.</div>;
+
+      const COLORS = ['#22d3ee', '#818cf8', '#34d399', '#f472b6', '#fbbf24', '#94a3b8'];
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden">
+              <div className="absolute right-0 top-0 p-4 opacity-10"><Clock className="w-24 h-24 text-cyan-500" /></div>
+              <p className="text-slate-400 text-sm font-medium">총 사용 시간</p>
+              <h3 className="text-3xl font-bold text-white mt-2">{stats.totalHours} <span className="text-lg text-slate-500 font-normal">시간</span></h3>
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden min-h-[500px] flex flex-col">
-              <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row gap-4 justify-between bg-slate-800/20">
-                <div className="flex p-1 bg-slate-950 rounded-lg border border-slate-800">
-                  {['ALL', ArtifactType.USB_DEVICE, ArtifactType.RECENT_DOC, ArtifactType.SHELLBAG].map(tab => (
-                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}>{getTabLabel(tab)}</button>
-                  ))}
-                </div>
-                <div className="relative w-full md:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
-                  <input type="text" placeholder="검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-cyan-500" />
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-950/50 text-slate-400 text-xs uppercase font-semibold">
-                    <tr><th className="px-6 py-4">일시</th><th className="px-6 py-4">유형</th><th className="px-6 py-4">항목명</th><th className="px-6 py-4">상세 경로/내용</th><th className="px-6 py-4 text-right">위험도</th></tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50">
-                    {filtered.map(item => (
-                      <tr key={item.id} className="hover:bg-slate-800/30">
-                        <td className="px-6 py-4 text-slate-400 font-mono text-xs">{new Date(item.timestamp).toLocaleString()}</td>
-                        <td className="px-6 py-4"><div className="flex items-center gap-2 text-slate-300">{getIcon(item.type)}<span className="capitalize">{getTabLabel(item.type)}</span></div></td>
-                        <td className="px-6 py-4 font-medium text-white">{item.name}</td>
-                        <td className="px-6 py-4 text-slate-400 max-w-xs truncate" title={item.path}>{item.path}</td>
-                        <td className="px-6 py-4 text-right"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRiskColor(item.riskLevel)}`}>{getRiskLabel(item.riskLevel)}</span></td>
-                      </tr>
-                    ))}
-                    {filtered.length === 0 && <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-500">데이터가 없습니다.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden">
+               <div className="absolute right-0 top-0 p-4 opacity-10"><Coffee className="w-24 h-24 text-yellow-500" /></div>
+               <p className="text-slate-400 text-sm font-medium">최다 사용 앱</p>
+               <h3 className="text-2xl font-bold text-white mt-2 truncate">{stats.topApps[0]?.name || '-'}</h3>
             </div>
           </div>
-        );
-      };
 
-      const Dashboard = ({ logs }) => {
-        const stats = useMemo(() => {
-          if (!logs.length) return null;
-          const totalDuration = logs.reduce((acc, log) => acc + log.durationSeconds, 0);
-          const appMap = new Map();
-          const catMap = new Map();
-          const dateMap = new Map();
-
-          logs.forEach(log => {
-            appMap.set(log.application, (appMap.get(log.application) || 0) + log.durationSeconds);
-            catMap.set(log.category, (catMap.get(log.category) || 0) + log.durationSeconds);
-            const date = log.timestamp.split('T')[0];
-            dateMap.set(date, (dateMap.get(date) || 0) + log.durationSeconds);
-          });
-
-          const topApps = Array.from(appMap.entries()).map(([name, duration]) => ({ name, duration: Math.round(duration / 60) })).sort((a, b) => b.duration - a.duration).slice(0, 5);
-          const categoryData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-          const activityData = Array.from(dateMap.entries()).map(([date, seconds]) => ({ date, hours: parseFloat((seconds / 3600).toFixed(1)) })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-          
-          const prodSeconds = catMap.get(LogCategory.PRODUCTIVITY) || 0;
-          const devSeconds = catMap.get(LogCategory.DEVELOPMENT) || 0;
-          const productivityScore = Math.min(100, Math.round(((prodSeconds + devSeconds) / totalDuration) * 100));
-
-          return { totalHours: (totalDuration / 3600).toFixed(1), topApps, categoryData, activityData, productivityScore };
-        }, [logs]);
-
-        if (!stats) return <div>데이터 없음</div>;
-        const COLORS = ['#22d3ee', '#818cf8', '#34d399', '#f472b6', '#fbbf24', '#94a3b8'];
-
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
-                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Clock className="w-24 h-24 text-cyan-500" /></div>
-                <p className="text-slate-400 text-sm font-medium">총 사용 시간</p>
-                <h3 className="text-3xl font-bold text-white mt-2">{stats.totalHours} <span className="text-lg text-slate-500 font-normal">시간</span></h3>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
-                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><CheckCircle className="w-24 h-24 text-green-500" /></div>
-                <p className="text-slate-400 text-sm font-medium">생산성 점수</p>
-                <h3 className="text-3xl font-bold text-white mt-2">{stats.productivityScore}%</h3>
-                <div className="w-full bg-slate-800 h-1 mt-3 rounded-full overflow-hidden"><div className="h-full bg-green-500" style={{ width: `${stats.productivityScore}%`}}></div></div>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
-                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Coffee className="w-24 h-24 text-yellow-500" /></div>
-                <p className="text-slate-400 text-sm font-medium">최다 사용 앱</p>
-                <h3 className="text-2xl font-bold text-white mt-2 truncate">{stats.topApps[0]?.name || 'N/A'}</h3>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
-                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><AlertTriangle className="w-24 h-24 text-pink-500" /></div>
-                <p className="text-slate-400 text-sm font-medium">실행된 앱 수</p>
-                <h3 className="text-3xl font-bold text-white mt-2">{stats.categoryData.length > 0 ? logs.reduce((acc, curr) => acc.add(curr.application), new Set()).size : 0}</h3>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-xl">
-                <h3 className="text-lg font-semibold text-white mb-6">일일 활동 트렌드</h3>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={stats.activityData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                      <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickFormatter={(val) => val.split('-').slice(1).join('/')} />
-                      <YAxis stroke="#94a3b8" fontSize={12} unit="h" />
-                      <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }} />
-                      <Line type="monotone" dataKey="hours" stroke="#22d3ee" strokeWidth={3} dot={{ r: 4, fill: '#0f172a' }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-                <h3 className="text-lg font-semibold text-white mb-6">시간 분포</h3>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={stats.categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
-                        {stats.categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />)}
-                      </Pie>
-                      <Tooltip formatter={(value) => `${(value / 3600).toFixed(1)} 시간`} contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      const AIAnalysis = ({ logs, artifacts = [] }) => {
-        const [messages, setMessages] = useState([{
-          role: 'ai', content: '데이터 분석이 완료되었습니다. 생산성 트렌드, 이상 징후, USB 및 파일 접근 이력 등에 대해 질문해 주세요.', timestamp: new Date()
-        }]);
-        const [input, setInput] = useState('');
-        const [isLoading, setIsLoading] = useState(false);
-        const scrollRef = useRef(null);
-
-        useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
-
-        const handleSend = async () => {
-          if (!input.trim() || isLoading) return;
-          const userMsg = { role: 'user', content: input, timestamp: new Date() };
-          setMessages(prev => [...prev, userMsg]);
-          setInput('');
-          setIsLoading(true);
-          try {
-            const response = await analyzeLogsWithGemini(logs, artifacts, userMsg.content);
-            setMessages(prev => [...prev, { role: 'ai', content: response, timestamp: new Date() }]);
-          } catch (error) {
-            setMessages(prev => [...prev, { role: 'ai', content: '요청을 처리하는 중 오류가 발생했습니다.', timestamp: new Date() }]);
-          } finally {
-            setIsLoading(false);
-          }
-        };
-
-        return (
-          <div className="flex flex-col h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
-            <div className="bg-slate-800/50 p-4 border-b border-slate-700 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20"><Sparkles className="w-5 h-5 text-cyan-400" /></div>
-              <div><h3 className="font-semibold text-white">Gemini 포렌식 어시스턴트</h3><p className="text-xs text-slate-400">Powered by Gemini 2.5 Flash</p></div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6" ref={scrollRef}>
-              {messages.map((msg, idx) => (
-                <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
-                    {msg.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-                  </div>
-                  <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed ${msg.role === 'user' ? 'bg-indigo-600/20 border border-indigo-500/20 text-indigo-100' : 'bg-slate-800 border border-slate-700 text-slate-200'}`}>
-                    {msg.role === 'ai' ? <div className="prose prose-invert prose-sm"><ReactMarkdown>{msg.content}</ReactMarkdown></div> : msg.content}
-                  </div>
-                </div>
-              ))}
-              {isLoading && <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center"><Bot className="w-5 h-5" /></div><div className="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-cyan-500" /><span className="text-sm text-slate-400">분석 중...</span></div></div>}
-            </div>
-            <div className="p-4 bg-slate-800/30 border-t border-slate-700">
-              <div className="relative flex items-center">
-                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="USB 사용 기록이나 의심스러운 파일 접근에 대해 물어보세요..." className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl py-4 pl-4 pr-14 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" disabled={isLoading} />
-                <button onClick={handleSend} disabled={isLoading || !input.trim()} className="absolute right-2 p-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 disabled:opacity-50"><Send className="w-5 h-5" /></button>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      const LogViewer = ({ logs }) => {
-        const [searchTerm, setSearchTerm] = useState('');
-        const [categoryFilter, setCategoryFilter] = useState('All');
-        const categories = ['All', ...new Set(logs.map(l => l.category))];
-
-        const filtered = logs.filter(log => (categoryFilter === 'All' || log.category === categoryFilter) && log.application.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        return (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-[calc(100vh-140px)]">
-            <div className="p-4 border-b border-slate-800 flex gap-4">
-              <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" /><input type="text" placeholder="검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-cyan-500" /></div>
-              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-cyan-500">{categories.map(c => <option key={c} value={c}>{c === 'All' ? '전체' : c}</option>)}</select>
-            </div>
-            <div className="flex-1 overflow-auto">
-              {filtered.map(log => (
-                <div key={log.id} className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-slate-800/50 hover:bg-slate-800/30 text-sm items-center">
-                  <div className="col-span-2 text-slate-400 font-mono text-xs">{new Date(log.timestamp).toLocaleTimeString()}</div>
-                  <div className="col-span-2 text-white font-medium truncate">{log.application}</div>
-                  <div className="col-span-4 text-slate-300 truncate">{log.windowTitle}</div>
-                  <div className="col-span-2"><span className="px-2 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">{log.category}</span></div>
-                  <div className="col-span-2 text-right text-slate-400 font-mono">{Math.floor(log.durationSeconds / 60)}분</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      };
-
-      // ----------------------------------------------------------------------
-      // APP
-      // ----------------------------------------------------------------------
-
-      const NavButton = ({ active, onClick, icon, label, isOpen, extraClass = "" }) => (
-        <button onClick={onClick} className={`flex items-center gap-3 w-full p-3 rounded-lg transition-all ${active ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' : `text-slate-400 hover:text-white hover:bg-slate-800 ${extraClass}`} ${!isOpen && 'justify-center'}`}>
-          <span className="w-5 h-5">{icon}</span>{isOpen && <span className="font-medium">{label}</span>}
-        </button>
-      );
-
-      const App = () => {
-        const [logs, setLogs] = useState([]);
-        const [artifacts, setArtifacts] = useState([]);
-        const [currentView, setCurrentView] = useState(AppView.UPLOAD);
-        const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-        const [isScanning, setIsScanning] = useState(false);
-        const [scanStep, setScanStep] = useState(0);
-
-        const handleLoadDemo = () => {
-          setLogs(generateMockData());
-          setArtifacts([]);
-          setCurrentView(AppView.DASHBOARD);
-        };
-
-        const handleFileUpload = (uploadedLogs, uploadedArtifacts = []) => {
-          setLogs(uploadedLogs);
-          setArtifacts(uploadedArtifacts);
-          setCurrentView(uploadedArtifacts.length > 0 ? AppView.FORENSICS : AppView.DASHBOARD);
-        };
-
-        const handleStartForensicScan = () => {
-          setIsScanning(true);
-          setScanStep(0);
-          const steps = [
-            () => setScanStep(1),
-            () => setScanStep(2),
-            () => setScanStep(3),
-            () => setScanStep(4),
-            () => {
-              setLogs(generateMockData());
-              setArtifacts(generateForensicArtifacts());
-              setIsScanning(false);
-              setCurrentView(AppView.FORENSICS);
-            }
-          ];
-          let step = 0;
-          const interval = setInterval(() => {
-            if (step < steps.length) { steps[step](); step++; } else { clearInterval(interval); }
-          }, 800);
-        };
-
-        const handleReset = () => {
-          setLogs([]);
-          setArtifacts([]);
-          setCurrentView(AppView.UPLOAD);
-        };
-
-        if (isScanning) {
-           const scanMessages = ["엔진 초기화 중...", "시스템 로그 분석 중...", "Shellbag(폴더접근) 파싱 중...", "USB 연결기록 확인 중...", "최근 문서(LNK) 스캔 중...", "보고서 생성 중..."];
-           return (
-             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-               <div className="max-w-md w-full text-center space-y-8">
-                 <div className="relative w-24 h-24 mx-auto">
-                   <div className="absolute inset-0 border-4 border-slate-800 rounded-full"></div>
-                   <div className="absolute inset-0 border-4 border-cyan-500 rounded-full border-t-transparent animate-spin"></div>
-                   <Activity className="absolute inset-0 m-auto w-10 h-10 text-cyan-400 animate-pulse" />
-                 </div>
-                 <div><h2 className="text-2xl font-bold text-white mb-2">포렌식 정밀 스캔 중</h2><p className="text-cyan-400 font-mono text-sm">{scanMessages[scanStep]}</p></div>
-                 <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden"><div className="bg-cyan-500 h-full transition-all duration-500 ease-out" style={{ width: `${(scanStep / 5) * 100}%` }}></div></div>
-               </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl h-80">
+               <h3 className="text-lg font-semibold text-white mb-4">일별 활동량</h3>
+               <ResponsiveContainer width="100%" height="100%">
+                 <LineChart data={stats.activityData}>
+                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                   <XAxis dataKey="date" stroke="#94a3b8" />
+                   <YAxis stroke="#94a3b8" />
+                   <RechartsTooltip contentStyle={{backgroundColor: '#1e293b', border: 'none'}} />
+                   <Line type="monotone" dataKey="hours" stroke="#22d3ee" strokeWidth={3} />
+                 </LineChart>
+               </ResponsiveContainer>
              </div>
-           );
-        }
-
-        if (currentView === AppView.UPLOAD && logs.length === 0) {
-          return (
-            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-              <div className="w-full max-w-4xl">
-                <header className="mb-12 text-center">
-                  <div className="flex items-center justify-center gap-3 mb-4"><Activity className="w-12 h-12 text-cyan-400" /><h1 className="text-4xl font-bold text-white">LogSentinel AI</h1></div>
-                  <p className="text-slate-400 text-lg">PC 사용 기록 및 디지털 포렌식 분석</p>
-                </header>
-                <FileUpload onUpload={handleFileUpload} onLoadDemo={handleLoadDemo} onStartForensicScan={handleStartForensicScan} />
-              </div>
-            </div>
-          );
-        }
-
-        return (
-          <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
-            <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col z-20`}>
-              <div className="p-4 flex items-center justify-between border-b border-slate-800 h-16">
-                {isSidebarOpen ? <div className="flex items-center gap-2 font-bold text-xl text-cyan-400"><Activity className="w-6 h-6" /><span>LogSentinel</span></div> : <Activity className="w-8 h-8 text-cyan-400 mx-auto" />}
-                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-500 hover:text-white lg:hidden">•</button>
-              </div>
-              <nav className="flex-1 p-4 space-y-2">
-                <NavButton active={currentView === AppView.DASHBOARD} onClick={() => setCurrentView(AppView.DASHBOARD)} icon={<LayoutDashboard />} label="대시보드" isOpen={isSidebarOpen} />
-                {artifacts.length > 0 && <NavButton active={currentView === AppView.FORENSICS} onClick={() => setCurrentView(AppView.FORENSICS)} icon={<ScanSearch />} label="포렌식 분석" isOpen={isSidebarOpen} extraClass="text-red-400 hover:text-red-300" />}
-                <NavButton active={currentView === AppView.ANALYSIS} onClick={() => setCurrentView(AppView.ANALYSIS)} icon={<BrainCircuit />} label="AI 분석" isOpen={isSidebarOpen} />
-                <NavButton active={currentView === AppView.LOGS} onClick={() => setCurrentView(AppView.LOGS)} icon={<FileText />} label="로그 데이터" isOpen={isSidebarOpen} />
-              </nav>
-              <div className="p-4 border-t border-slate-800">
-                <button onClick={handleReset} className={`flex items-center gap-3 w-full p-3 rounded-lg text-red-400 hover:bg-red-950/30 transition-colors ${!isSidebarOpen && 'justify-center'}`}><LogOut className="w-5 h-5" />{isSidebarOpen && <span>세션 종료</span>}</button>
-              </div>
-            </aside>
-            <main className="flex-1 overflow-auto bg-slate-950 relative">
-              <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10 flex items-center px-8 justify-between">
-                <h2 className="text-xl font-semibold text-white">
-                  {currentView === AppView.FORENSICS ? '디지털 포렌식 보고서' : 
-                   currentView === AppView.DASHBOARD ? '개요 대시보드' :
-                   currentView === AppView.ANALYSIS ? 'AI 인사이트 & 분석' : '원본 데이터'}
-                </h2>
-                <div className="text-sm text-slate-400">로드된 이벤트: {logs.length.toLocaleString()} 건</div>
-              </header>
-              <div className="p-6 max-w-7xl mx-auto">
-                {currentView === AppView.DASHBOARD && <Dashboard logs={logs} />}
-                {currentView === AppView.ANALYSIS && <AIAnalysis logs={logs} artifacts={artifacts} />}
-                {currentView === AppView.LOGS && <LogViewer logs={logs} />}
-                {currentView === AppView.FORENSICS && <ForensicsView artifacts={artifacts} />}
-              </div>
-            </main>
+             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl h-80">
+               <h3 className="text-lg font-semibold text-white mb-4">카테고리 비율</h3>
+               <ResponsiveContainer width="100%" height="100%">
+                 <PieChart>
+                   <Pie data={stats.categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                     {stats.categoryData.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
+                     ))}
+                   </Pie>
+                   <RechartsTooltip contentStyle={{backgroundColor: '#1e293b', border: 'none'}} />
+                 </PieChart>
+               </ResponsiveContainer>
+             </div>
           </div>
-        );
+        </div>
+      );
+    };
+
+    // --- ForensicsView ---
+    const ForensicsView = ({ artifacts }) => {
+      const [activeTab, setActiveTab] = useState('ALL');
+      const filtered = artifacts.filter(a => activeTab === 'ALL' || a.type === activeTab);
+
+      const getIcon = (type) => {
+        if(type === ArtifactType.USB_DEVICE) return <Usb className="w-4 h-4" />;
+        if(type === ArtifactType.RECENT_DOC) return <FileText className="w-4 h-4" />;
+        return <FolderOpen className="w-4 h-4" />;
       };
 
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(<App />);
-    </script>
-  </body>
+      return (
+        <div className="space-y-6">
+           <div className="grid grid-cols-3 gap-4">
+             <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex justify-between">
+               <div><p className="text-slate-400 text-xs font-bold">USB 연결 기록</p><h3 className="text-2xl font-bold text-white">{artifacts.filter(a=>a.type===ArtifactType.USB_DEVICE).length}</h3></div>
+               <Usb className="w-8 h-8 text-cyan-400 opacity-50" />
+             </div>
+             <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex justify-between">
+               <div><p className="text-slate-400 text-xs font-bold">고위험 파일</p><h3 className="text-2xl font-bold text-red-500">{artifacts.filter(a=>a.riskLevel==='HIGH').length}</h3></div>
+               <ShieldAlert className="w-8 h-8 text-red-400 opacity-50" />
+             </div>
+           </div>
+
+           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+             <div className="p-4 border-b border-slate-800 flex gap-2">
+               {['ALL', ArtifactType.USB_DEVICE, ArtifactType.RECENT_DOC, ArtifactType.SHELLBAG].map(tab => (
+                 <button key={tab} onClick={()=>setActiveTab(tab)} 
+                   className={`px-4 py-2 rounded text-sm ${activeTab===tab ? 'bg-slate-800 text-white' : 'text-slate-400'}`}>
+                   {tab === 'ALL' ? '전체' : tab}
+                 </button>
+               ))}
+             </div>
+             <div className="overflow-x-auto">
+               <table className="w-full text-left text-sm">
+                 <thead className="bg-slate-950/50 text-slate-400 text-xs">
+                   <tr>
+                     <th className="px-6 py-4">시간</th>
+                     <th className="px-6 py-4">유형</th>
+                     <th className="px-6 py-4">이름</th>
+                     <th className="px-6 py-4">경로/상세</th>
+                     <th className="px-6 py-4">위험도</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-800/50 text-slate-300">
+                   {filtered.map(item => (
+                     <tr key={item.id} className="hover:bg-slate-800/30">
+                       <td className="px-6 py-4">{new Date(item.timestamp).toLocaleString()}</td>
+                       <td className="px-6 py-4 flex items-center gap-2">{getIcon(item.type)} {item.type}</td>
+                       <td className="px-6 py-4 text-white font-medium">{item.name}</td>
+                       <td className="px-6 py-4 text-slate-500 truncate max-w-xs" title={item.path}>{item.path}</td>
+                       <td className="px-6 py-4">
+                         <span className={`px-2 py-1 rounded text-xs ${item.riskLevel==='HIGH'?'bg-red-500/20 text-red-400':'bg-slate-700 text-slate-300'}`}>
+                           {item.riskLevel}
+                         </span>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+        </div>
+      );
+    };
+
+    // --- AIAnalysis ---
+    const AIAnalysis = ({ logs, artifacts }) => {
+      const [messages, setMessages] = useState([{ role: 'ai', content: '분석이 완료되었습니다. 무엇이 궁금하신가요?', timestamp: new Date() }]);
+      const [input, setInput] = useState('');
+      const [loading, setLoading] = useState(false);
+      const scrollRef = useRef(null);
+
+      useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
+
+      const send = async () => {
+        if(!input.trim() || loading) return;
+        const userMsg = { role: 'user', content: input, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setLoading(true);
+        try {
+          const result = await analyzeLogsWithGemini(logs, artifacts, userMsg.content);
+          setMessages(prev => [...prev, { role: 'ai', content: result, timestamp: new Date() }]);
+        } catch(e) {
+          setMessages(prev => [...prev, { role: 'ai', content: '오류 발생', timestamp: new Date() }]);
+        }
+        setLoading(false);
+      };
+
+      return (
+        <div className="flex flex-col h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-slate-800 flex items-center gap-2 bg-slate-800/50">
+            <Sparkles className="w-5 h-5 text-cyan-400" />
+            <h3 className="text-white font-bold">Gemini AI 분석관</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={scrollRef}>
+            {messages.map((m, i) => (
+              <div key={i} className={`flex gap-4 ${m.role==='user'?'flex-row-reverse':''}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role==='user'?'bg-indigo-500/20 text-indigo-400':'bg-cyan-500/20 text-cyan-400'}`}>
+                  {m.role==='user'?<User className="w-4 h-4"/>:<Bot className="w-4 h-4"/>}
+                </div>
+                <div className={`max-w-[80%] p-4 rounded-xl text-sm leading-relaxed whitespace-pre-wrap ${m.role==='user'?'bg-indigo-900/30 text-indigo-100':'bg-slate-800 text-slate-200'}`}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {loading && <div className="text-slate-500 text-sm ml-12">분석 중...</div>}
+          </div>
+          <div className="p-4 bg-slate-800/30 border-t border-slate-700 flex gap-2">
+            <input 
+              value={input} 
+              onChange={e=>setInput(e.target.value)} 
+              onKeyDown={e=>e.key==='Enter'&&send()}
+              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-500"
+              placeholder="질문을 입력하세요..."
+            />
+            <button onClick={send} className="bg-cyan-600 text-white p-3 rounded-lg hover:bg-cyan-500"><Send className="w-5 h-5"/></button>
+          </div>
+        </div>
+      );
+    };
+
+    // --- App (Main) ---
+    const App = () => {
+      const [logs, setLogs] = useState([]);
+      const [artifacts, setArtifacts] = useState([]);
+      const [view, setView] = useState(AppView.UPLOAD);
+      const [scanning, setScanning] = useState(false);
+      const [step, setStep] = useState(0);
+
+      const handleUpload = (uLogs, uArtifacts) => {
+        setLogs(uLogs);
+        setArtifacts(uArtifacts);
+        setView(uArtifacts.length > 0 ? AppView.FORENSICS : AppView.DASHBOARD);
+      };
+
+      const startScan = () => {
+        setScanning(true);
+        let s = 0;
+        const interval = setInterval(() => {
+          s++;
+          setStep(s);
+          if (s >= 5) {
+            clearInterval(interval);
+            setLogs(generateMockData());
+            setArtifacts(generateForensicArtifacts());
+            setScanning(false);
+            setView(AppView.FORENSICS);
+          }
+        }, 800);
+      };
+
+      if (scanning) {
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white">
+            <div className="w-24 h-24 border-4 border-slate-800 border-t-cyan-500 rounded-full animate-spin mb-8"></div>
+            <h2 className="text-2xl font-bold mb-2">포렌식 정밀 스캔 중...</h2>
+            <p className="text-cyan-400 font-mono text-sm">Step {step}/5: 시스템 아티팩트 분석 중</p>
+          </div>
+        );
+      }
+
+      if (view === AppView.UPLOAD && logs.length === 0) {
+        return (
+          <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+            <div className="max-w-4xl w-full">
+              <header className="text-center mb-12">
+                <div className="flex justify-center items-center gap-3 mb-4">
+                  <Activity className="w-12 h-12 text-cyan-400" />
+                  <h1 className="text-4xl font-bold text-white">LogSentinel AI</h1>
+                </div>
+                <p className="text-slate-400 text-lg">지능형 PC 사용기록 분석 및 디지털 포렌식 도구</p>
+              </header>
+              <FileUpload onUpload={handleUpload} onLoadDemo={()=>{
+                setLogs(generateMockData());
+                setArtifacts([]);
+                setView(AppView.DASHBOARD);
+              }} onStartForensicScan={startScan} />
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
+          <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
+            <div className="p-4 h-16 flex items-center gap-2 border-b border-slate-800 text-cyan-400 font-bold text-xl">
+              <Activity /> LogSentinel
+            </div>
+            <nav className="p-4 space-y-2 flex-1">
+              <button onClick={()=>setView(AppView.DASHBOARD)} className={`w-full flex items-center gap-3 p-3 rounded transition-colors ${view===AppView.DASHBOARD?'bg-cyan-500/10 text-cyan-400':'hover:bg-slate-800'}`}>
+                <LayoutDashboard className="w-5 h-5" /> 대시보드
+              </button>
+              {artifacts.length > 0 && (
+                <button onClick={()=>setView(AppView.FORENSICS)} className={`w-full flex items-center gap-3 p-3 rounded transition-colors ${view===AppView.FORENSICS?'bg-red-500/10 text-red-400':'hover:bg-slate-800 text-red-400'}`}>
+                  <ScanSearch className="w-5 h-5" /> 포렌식 분석
+                </button>
+              )}
+              <button onClick={()=>setView(AppView.ANALYSIS)} className={`w-full flex items-center gap-3 p-3 rounded transition-colors ${view===AppView.ANALYSIS?'bg-cyan-500/10 text-cyan-400':'hover:bg-slate-800'}`}>
+                <BrainCircuit className="w-5 h-5" /> AI 분석
+              </button>
+            </nav>
+            <div className="p-4 border-t border-slate-800">
+               <button onClick={()=>{setLogs([]);setArtifacts([]);setView(AppView.UPLOAD)}} className="w-full flex items-center justify-center gap-2 text-red-400 hover:text-red-300">
+                 <LogOut className="w-4 h-4" /> 세션 종료
+               </button>
+            </div>
+          </aside>
+          <main className="flex-1 overflow-auto">
+             <header className="h-16 border-b border-slate-800 bg-slate-900/50 flex items-center px-8 justify-between sticky top-0 z-10 backdrop-blur">
+               <h2 className="text-xl font-semibold text-white">
+                 {view === AppView.DASHBOARD && '통합 대시보드'}
+                 {view === AppView.FORENSICS && '디지털 포렌식 보고서'}
+                 {view === AppView.ANALYSIS && 'AI 인텔리전스'}
+               </h2>
+               <div className="text-sm text-slate-400">{logs.length}개 이벤트 로드됨</div>
+             </header>
+             <div className="p-6 max-w-7xl mx-auto">
+               {view === AppView.DASHBOARD && <Dashboard logs={logs} />}
+               {view === AppView.FORENSICS && <ForensicsView artifacts={artifacts} />}
+               {view === AppView.ANALYSIS && <AIAnalysis logs={logs} artifacts={artifacts} />}
+             </div>
+          </main>
+        </div>
+      );
+    };
+
+    // --- Mount ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
 </html>
