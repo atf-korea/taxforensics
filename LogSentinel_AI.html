@@ -3,40 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LogSentinel AI - 디지털 포렌식 통합 분석기</title>
+  <title>LogSentinel AI - Forensic Analyzer</title>
   
-  <!-- 스타일 (Tailwind CSS) -->
+  <!-- Styles -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- 폰트 -->
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet" />
-
-  <!-- 필수 라이브러리 (UMD 방식 - 동기 로딩 보장) -->
-  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
   
-  <!-- Babel Standalone (JSX 컴파일러) -->
+  <!-- React & Recharts (UMD Globals) - 안정적인 구버전 CDN 사용 -->
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js" crossorigin></script>
+  
+  <!-- Babel for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-    body { 
-      background-color: #020617; 
-      color: #e2e8f0; 
-      font-family: 'Pretendard', sans-serif; 
-    }
-    /* 커스텀 스크롤바 */
+    body { font-family: 'Pretendard', sans-serif; background-color: #020617; color: #e2e8f0; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
     
-    /* 애니메이션 */
-    @keyframes pulse-glow {
-      0%, 100% { opacity: 1; filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.5)); }
-      50% { opacity: 0.7; filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.2)); }
-    }
-    .animate-pulse-glow { animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 <script type="importmap">
 {
@@ -52,527 +41,391 @@
 </script>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root" class="h-screen flex items-center justify-center text-slate-500">
+    <div class="text-center">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mb-4"></div>
+      <p>System Initializing...</p>
+    </div>
+  </div>
 
-  <!-- 메인 애플리케이션 스크립트 -->
   <script type="text/babel">
-    /*******************************************************
-     * 0. 환경 설정 및 유틸리티
-     *******************************************************/
-    // process 객체 안전 장치 (ReferenceError 방지)
-    window.process = { env: { NODE_ENV: 'production', API_KEY: '' } };
-
+    // React Hooks & Globals (안전하게 가져오기)
     const { useState, useEffect, useMemo, useRef } = React;
-    const { 
-      BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip: RechartsTooltip, ResponsiveContainer, 
-      PieChart, Pie, Cell, LineChart, Line 
-    } = window.Recharts;
 
     /*******************************************************
-     * 1. 아이콘 컴포넌트 (Inline SVG - 로딩 오류 방지용)
+     * ICONS (Inline SVG to avoid loading errors)
      *******************************************************/
-    const IconWrapper = ({ children, className, ...props }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
-        {children}
-      </svg>
-    );
-
     const Icons = {
-      Activity: (p) => <IconWrapper {...p}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></IconWrapper>,
-      LayoutDashboard: (p) => <IconWrapper {...p}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></IconWrapper>,
-      ScanSearch: (p) => <IconWrapper {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M21 21l-4.35-4.35"/></IconWrapper>,
-      BrainCircuit: (p) => <IconWrapper {...p}><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.97-3.284"/><path d="M17.97 14.716A4 4 0 0 1 16 18"/></IconWrapper>,
-      FileText: (p) => <IconWrapper {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconWrapper>,
-      LogOut: (p) => <IconWrapper {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></IconWrapper>,
-      UploadCloud: (p) => <IconWrapper {...p}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></IconWrapper>,
-      Download: (p) => <IconWrapper {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconWrapper>,
-      Terminal: (p) => <IconWrapper {...p}><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></IconWrapper>,
-      Play: (p) => <IconWrapper {...p}><polygon points="5 3 19 12 5 21 5 3"/></IconWrapper>,
-      FileJson: (p) => <IconWrapper {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/></IconWrapper>,
-      AlertCircle: (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconWrapper>,
-      Clock: (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconWrapper>,
-      CheckCircle: (p) => <IconWrapper {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>,
-      Coffee: (p) => <IconWrapper {...p}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></IconWrapper>,
-      AlertTriangle: (p) => <IconWrapper {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconWrapper>,
-      Usb: (p) => <IconWrapper {...p}><circle cx="10" cy="7" r="1"/><circle cx="4" cy="20" r="1"/><path d="M4.7 19.3 19 5"/><path d="m21 3-3 1 2 2Z"/><path d="M9.26 7.68 5 12l2 5"/></IconWrapper>,
-      ShieldAlert: (p) => <IconWrapper {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 8v4"/><path d="M12 16h.01"/></IconWrapper>,
-      FolderOpen: (p) => <IconWrapper {...p}><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></IconWrapper>,
-      Search: (p) => <IconWrapper {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconWrapper>,
-      Filter: (p) => <IconWrapper {...p}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></IconWrapper>,
-      ArrowUp: (p) => <IconWrapper {...p}><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></IconWrapper>,
-      ArrowDown: (p) => <IconWrapper {...p}><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></IconWrapper>,
-      Send: (p) => <IconWrapper {...p}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></IconWrapper>,
-      Bot: (p) => <IconWrapper {...p}><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></IconWrapper>,
-      User: (p) => <IconWrapper {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconWrapper>,
-      Sparkles: (p) => <IconWrapper {...p}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/></IconWrapper>,
-      Loader2: (p) => <IconWrapper {...p} className={`${p.className} animate-spin`}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></IconWrapper>
+      Activity: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+      BarChart2: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>,
+      FileText: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+      BrainCircuit: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.97-3.284"/><path d="M17.969 14.716A4 4 0 0 1 16 18"/></svg>,
+      UploadCloud: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,
+      LogOut: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+      LayoutDashboard: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
+      ScanSearch: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16-1.9-1.9"/></svg>,
+      Loader2: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
+      Usb: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="7" r="1"/><circle cx="4" cy="20" r="1"/><path d="M4.7 19.3 19 5"/><path d="m21 3-3 1 2 2Z"/><path d="M9.26 7.68 5.99 13.44"/><path d="M5 16c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2"/></svg>,
+      FolderOpen: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>,
+      ShieldAlert: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
+      Clock: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      CheckCircle: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+      Coffee: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>,
+      AlertTriangle: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>,
+      Send: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
+      Bot: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
+      User: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+      Sparkles: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/></svg>,
+      Key: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/><line x1="7.5" x2="7.5" y1="15.5" y2="15.5"/></svg>,
+      Save: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+      Download: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+      Terminal: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
     };
 
     /*******************************************************
-     * 2. 데이터 & 타입
+     * TYPES & SERVICES
      *******************************************************/
     const AppView = { UPLOAD: 'UPLOAD', DASHBOARD: 'DASHBOARD', ANALYSIS: 'ANALYSIS', LOGS: 'LOGS', FORENSICS: 'FORENSICS' };
     const LogCategory = { PRODUCTIVITY: 'Productivity', ENTERTAINMENT: 'Entertainment', SYSTEM: 'System', COMMUNICATION: 'Communication', DEVELOPMENT: 'Development', UNCATEGORIZED: 'Uncategorized' };
     const ArtifactType = { USB_DEVICE: 'USB_DEVICE', RECENT_DOC: 'RECENT_DOC', SHELLBAG: 'SHELLBAG' };
 
-    // --- Mock Data Service ---
     const generateMockData = () => {
       const apps = [
         { name: 'VS Code', category: LogCategory.DEVELOPMENT },
         { name: 'Google Chrome', category: LogCategory.UNCATEGORIZED },
         { name: 'Slack', category: LogCategory.COMMUNICATION },
         { name: 'Spotify', category: LogCategory.ENTERTAINMENT },
-        { name: 'Zoom', category: LogCategory.COMMUNICATION },
-        { name: 'Figma', category: LogCategory.PRODUCTIVITY },
-        { name: 'PowerShell', category: LogCategory.DEVELOPMENT },
-        { name: 'System Settings', category: LogCategory.SYSTEM }
+        { name: 'Excel', category: LogCategory.PRODUCTIVITY },
       ];
       const logs = [];
       const now = new Date();
-      for (let i = 0; i < 5; i++) {
-        const day = new Date(now);
-        day.setDate(day.getDate() - i);
-        const count = 15 + Math.floor(Math.random() * 20);
-        let time = new Date(day); time.setHours(9,0,0);
-        for (let j = 0; j < count; j++) {
-          const app = apps[Math.floor(Math.random() * apps.length)];
-          const dur = 60 + Math.floor(Math.random() * 2400);
-          time = new Date(time.getTime() + dur * 1000 + 60000);
-          
-          let title = `[${app.name}] 메인 윈도우`;
-          let cat = app.category;
-          if (app.name === 'Google Chrome') {
-            if (Math.random() > 0.7) { title = '유튜브 - 재밌는 영상'; cat = LogCategory.ENTERTAINMENT; }
-            else { title = 'StackOverflow - React 에러 해결'; cat = LogCategory.DEVELOPMENT; }
-          }
-          logs.push({
-            id: Math.random().toString(36).substr(2, 9),
-            timestamp: time.toISOString(),
-            application: app.name,
-            windowTitle: title,
-            durationSeconds: dur,
-            category: cat
-          });
-        }
+      for (let i = 0; i < 50; i++) {
+        const app = apps[Math.floor(Math.random() * apps.length)];
+        const time = new Date(now.getTime() - Math.random() * 7 * 24 * 3600 * 1000);
+        logs.push({
+          id: i.toString(),
+          timestamp: time.toISOString(),
+          application: app.name,
+          windowTitle: `Active Window - ${app.name}`,
+          durationSeconds: Math.floor(Math.random() * 1800) + 60,
+          category: app.category
+        });
       }
-      return logs.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+      return logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     };
 
     const generateForensicArtifacts = () => {
-      const artifacts = [];
-      const now = new Date();
-      // USB
-      artifacts.push({ id: 'usb1', timestamp: new Date(now-86400000).toISOString(), type: ArtifactType.USB_DEVICE, name: 'Samsung T7 Shield', path: 'USBSTOR\\Disk&Ven_Samsung&Prod_T7', riskLevel: 'LOW' });
-      artifacts.push({ id: 'usb2', timestamp: new Date(now-172800000).toISOString(), type: ArtifactType.USB_DEVICE, name: 'SanDisk Ultra', path: 'USBSTOR\\Disk&Ven_SanDisk', riskLevel: 'MEDIUM' });
-      // Shellbags
-      artifacts.push({ id: 'sb1', timestamp: new Date(now-3600000).toISOString(), type: ArtifactType.SHELLBAG, name: '비밀_프로젝트', path: 'E:\\Hidden_Project', riskLevel: 'HIGH' });
-      artifacts.push({ id: 'sb2', timestamp: new Date(now-7200000).toISOString(), type: ArtifactType.SHELLBAG, name: '내 사진', path: 'C:\\Users\\Admin\\Pictures', riskLevel: 'LOW' });
-      // Docs
-      artifacts.push({ id: 'doc1', timestamp: new Date(now-1800000).toISOString(), type: ArtifactType.RECENT_DOC, name: '2024_연봉협상안.xlsx', path: 'C:\\Users\\Admin\\Documents', riskLevel: 'HIGH' });
-      artifacts.push({ id: 'doc2', timestamp: new Date(now-5400000).toISOString(), type: ArtifactType.RECENT_DOC, name: '회의록.txt', path: 'C:\\Desktop', riskLevel: 'LOW' });
-      return artifacts.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+      return [
+        { id: '1', timestamp: new Date().toISOString(), type: ArtifactType.USB_DEVICE, name: 'Samsung T7', path: 'USBSTOR\\Disk&Ven_Samsung', action: 'Connected', riskLevel: 'LOW' },
+        { id: '2', timestamp: new Date().toISOString(), type: ArtifactType.RECENT_DOC, name: 'Secret_Plans.docx', path: 'C:\\Users\\Admin\\Desktop\\Secret_Plans.docx', action: 'Accessed', riskLevel: 'HIGH' },
+        { id: '3', timestamp: new Date().toISOString(), type: ArtifactType.SHELLBAG, name: 'Private_Photos', path: 'E:\\Private_Photos', action: 'Folder Explored', riskLevel: 'MEDIUM' },
+        { id: '4', timestamp: new Date().toISOString(), type: ArtifactType.USB_DEVICE, name: 'Unknown Flash Drive', path: 'USBSTOR\\Disk&Ven_Unknown', action: 'Connected', riskLevel: 'HIGH' }
+      ];
     };
 
-    // --- AI Service ---
-    const analyzeWithGemini = async (logs, artifacts, query) => {
-      // 데모용 키 (실제 키가 없다면 아래는 동작하지 않음)
-      const apiKey = window.process.env.API_KEY || ''; 
-      if (!apiKey) return "⚠️ API 키가 설정되지 않아 AI 분석을 수행할 수 없습니다. (소스 코드에서 API 키를 설정해주세요)";
+    const analyzeLogsWithGemini = async (logs, artifacts, userPrompt, apiKey) => {
+      if (!apiKey) throw new Error("API Key가 필요합니다.");
+      const summary = `Logs: ${logs.length} entries. Top App: ${logs[0]?.application}. Artifacts: ${artifacts.length} items.`;
+      const payload = {
+        contents: [{
+          parts: [{
+            text: `System: 당신은 디지털 포렌식 전문가입니다. 한국어로 답변하세요.
+                   Data Context: ${summary}
+                   User Question: ${userPrompt}`
+          }]
+        }]
+      };
 
-      const summary = `로그수: ${logs.length}, USB장치: ${artifacts.filter(a=>a.type===ArtifactType.USB_DEVICE).length}개`;
-      
       try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `데이터 요약: ${summary}\n질문: ${query}\n당신은 디지털 포렌식 전문가입니다.` }] }]
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-        const data = await res.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || "분석 결과를 가져오지 못했습니다.";
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || "분석 결과를 생성하지 못했습니다.";
       } catch (e) {
-        return "AI 연결 오류: " + e.message;
+        throw new Error(`AI 요청 실패: ${e.message}`);
       }
     };
 
     /*******************************************************
-     * 3. 컴포넌트
+     * COMPONENT: Dashboard
      *******************************************************/
-
-    // --- FileUpload ---
-    const FileUpload = ({ onUpload, onLoadDemo, onStartScan }) => {
-      const [drag, setDrag] = useState(false);
+    const Dashboard = ({ logs }) => {
+      // Recharts 객체를 안전하게 접근 (useEffect 내부가 아니라 렌더링 시점에는 이미 waitForGlobals 통과됨)
+      const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = window.Recharts;
       
-      const downloadScript = () => {
-        const text = `# LogSentinel 수집 스크립트\nWrite-Host "데이터 수집 시작..." -Fg Cyan\nStart-Sleep -s 1\nWrite-Host "완료! forensics_data.json 생성됨" -Fg Green`;
-        const blob = new Blob([text], {type: 'text/plain'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href=url; a.download='collect_data.ps1';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      const stats = useMemo(() => {
+        const totalDuration = logs.reduce((acc, log) => acc + log.durationSeconds, 0);
+        const appMap = {};
+        logs.forEach(l => { appMap[l.application] = (appMap[l.application] || 0) + l.durationSeconds; });
+        const topApps = Object.entries(appMap)
+          .map(([name, dur]) => ({ name, duration: Math.round(dur / 60) }))
+          .sort((a, b) => b.duration - a.duration)
+          .slice(0, 5);
+        return { totalHours: (totalDuration / 3600).toFixed(1), topApps };
+      }, [logs]);
+
+      return (
+        <div className="space-y-6 animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <h3 className="text-slate-400 text-sm font-medium">총 분석 시간</h3>
+                <p className="text-3xl font-bold text-white mt-2">{stats.totalHours} <span className="text-lg font-normal text-slate-500">시간</span></p>
+             </div>
+             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <h3 className="text-slate-400 text-sm font-medium">분석된 이벤트 수</h3>
+                <p className="text-3xl font-bold text-cyan-400 mt-2">{logs.length.toLocaleString()}</p>
+             </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl h-80">
+            <h3 className="text-lg font-semibold text-white mb-4">상위 사용 애플리케이션 (분)</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.topApps} layout="vertical" margin={{top: 5, right: 30, left: 40, bottom: 5}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false}/>
+                <XAxis type="number" stroke="#94a3b8" fontSize={12} />
+                <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} width={100} />
+                <Tooltip contentStyle={{backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc'}} />
+                <Bar dataKey="duration" fill="#22d3ee" radius={[0, 4, 4, 0]} barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      );
+    };
+
+    /*******************************************************
+     * COMPONENT: AIAnalysis
+     *******************************************************/
+    const AIAnalysis = ({ logs, artifacts }) => {
+      const [messages, setMessages] = useState([{ role: 'ai', content: 'PC 사용 기록과 포렌식 데이터 분석 준비가 되었습니다. 무엇을 도와드릴까요?' }]);
+      const [input, setInput] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [apiKey, setApiKey] = useState(() => localStorage.getItem('GEMINI_API_KEY') || '');
+      const [tempKey, setTempKey] = useState('');
+      const [showKeyInput, setShowKeyInput] = useState(!apiKey);
+
+      const handleSaveKey = () => {
+        if(tempKey.trim()) {
+          localStorage.setItem('GEMINI_API_KEY', tempKey.trim());
+          setApiKey(tempKey.trim());
+          setShowKeyInput(false);
+        }
       };
 
-      const handleFile = (e) => {
-        const file = e.target.files?.[0] || e.dataTransfer?.files?.[0];
-        if (file) {
-          const r = new FileReader();
-          r.onload = (ev) => {
-            try {
-              const d = JSON.parse(ev.target.result);
-              if (Array.isArray(d)) onUpload(d, []);
-              else if (d.logs || d.artifacts) onUpload(d.logs||[], d.artifacts||[]);
-            } catch(err) { alert('JSON 파싱 실패'); }
-          };
-          r.readAsText(file);
+      const handleSend = async () => {
+        if (!input.trim() || loading) return;
+        if (!apiKey) {
+           setMessages(prev => [...prev, { role: 'ai', content: 'API Key가 없습니다. 상단의 [키 설정]을 눌러 키를 입력해주세요.' }]);
+           setShowKeyInput(true);
+           return;
+        }
+
+        const userMsg = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setLoading(true);
+
+        try {
+          const result = await analyzeLogsWithGemini(logs, artifacts, userMsg.content, apiKey);
+          setMessages(prev => [...prev, { role: 'ai', content: result }]);
+        } catch (e) {
+          setMessages(prev => [...prev, { role: 'ai', content: `오류 발생: ${e.message}` }]);
+        } finally {
+          setLoading(false);
         }
       };
 
       return (
-        <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-8 shadow-2xl animate-fade-in-up">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div 
-              className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${drag?'border-cyan-500 bg-cyan-500/10':'border-slate-700 hover:border-slate-500'}`}
-              onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);handleFile(e)}}
-            >
-              <input type="file" onChange={handleFile} accept=".json" className="hidden" id="fileIn" />
-              <label htmlFor="fileIn" className="cursor-pointer w-full h-full flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-cyan-400">
-                  <Icons.UploadCloud className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">데이터 업로드</h3>
-                <p className="text-slate-400">JSON 파일을 드래그하거나 클릭하세요</p>
-              </label>
+        <div className="flex flex-col h-[600px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden animate-fade-in">
+          <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Icons.Sparkles className="text-cyan-400 w-5 h-5"/>
+              <h3 className="font-semibold text-white">Gemini 포렌식 AI</h3>
             </div>
-            <div className="space-y-4">
-              <div className="bg-slate-800/30 p-5 rounded-xl border border-slate-700/50">
-                <div className="flex items-center gap-2 mb-2 text-green-400 font-bold"><Icons.Terminal className="w-5 h-5"/> 실제 PC 분석</div>
-                <p className="text-xs text-slate-400 mb-3">브라우저 보안으로 직접 접근 불가. 수집 스크립트를 사용하세요.</p>
-                <button onClick={downloadScript} className="w-full py-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-sm text-slate-200 flex items-center justify-center gap-2">
-                  <Icons.Download className="w-4 h-4"/> 수집 스크립트 다운로드
-                </button>
-              </div>
-              <button onClick={onStartScan} className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/20">
-                <Icons.ScanSearch className="w-5 h-5"/> 포렌식 정밀 스캔 시뮬레이션
-              </button>
-              <button onClick={onLoadDemo} className="w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-medium flex items-center justify-center gap-2">
-                <Icons.Play className="w-4 h-4"/> 데모 데이터 로드
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    // --- Dashboard ---
-    const Dashboard = ({ logs }) => {
-      const stats = useMemo(() => {
-        if (!logs.length) return null;
-        const totalSec = logs.reduce((a,b)=>a+b.durationSeconds,0);
-        const hours = (totalSec/3600).toFixed(1);
-        const appMap = {};
-        logs.forEach(l => appMap[l.application] = (appMap[l.application]||0) + l.durationSeconds);
-        const topApps = Object.entries(appMap).map(([n,v])=>({name:n, value: Math.round(v/60)})).sort((a,b)=>b.value-a.value).slice(0,5);
-        
-        const catMap = {};
-        logs.forEach(l => catMap[l.category] = (catMap[l.category]||0) + l.durationSeconds);
-        const cats = Object.entries(catMap).map(([n,v])=>({name:n, value:v})).sort((a,b)=>b.value-a.value);
-        
-        const dateMap = {};
-        logs.forEach(l => { const d=l.timestamp.split('T')[0]; dateMap[d]=(dateMap[d]||0)+l.durationSeconds; });
-        const dates = Object.entries(dateMap).map(([d,s])=>({date:d, hours:parseFloat((s/3600).toFixed(1))})).sort((a,b)=>new Date(a.date)-new Date(b.date));
-
-        return { hours, topApps, cats, dates };
-      }, [logs]);
-
-      if (!stats) return null;
-      const COLORS = ['#22d3ee', '#818cf8', '#34d399', '#f472b6', '#fbbf24'];
-
-      return (
-        <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden">
-              <div className="absolute right-0 top-0 p-4 opacity-10"><Icons.Clock className="w-24 h-24 text-cyan-500"/></div>
-              <p className="text-slate-400 text-sm font-bold">총 사용 시간</p>
-              <h3 className="text-3xl font-bold text-white mt-2">{stats.hours} <span className="text-lg text-slate-500 font-normal">시간</span></h3>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden">
-              <div className="absolute right-0 top-0 p-4 opacity-10"><Icons.Coffee className="w-24 h-24 text-yellow-500"/></div>
-              <p className="text-slate-400 text-sm font-bold">최다 사용 앱</p>
-              <h3 className="text-2xl font-bold text-white mt-2 truncate">{stats.topApps[0]?.name}</h3>
-            </div>
+            <button onClick={() => setShowKeyInput(!showKeyInput)} className="text-xs flex items-center gap-1 bg-slate-800 px-3 py-1 rounded border border-slate-700 text-slate-300 hover:text-white">
+              <Icons.Key className="w-3 h-3"/> {apiKey ? '키 변경' : '키 설정'}
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl h-80">
-              <h3 className="text-lg font-bold text-white mb-4">일별 활동량</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.dates}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickFormatter={v=>v.slice(5)} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <RechartsTooltip contentStyle={{backgroundColor:'#0f172a', borderColor:'#334155', color:'#f1f5f9'}} />
-                  <Line type="monotone" dataKey="hours" stroke="#22d3ee" strokeWidth={3} dot={{r:4, fill:'#0f172a'}} />
-                </LineChart>
-              </ResponsiveContainer>
+          {showKeyInput && (
+            <div className="p-4 bg-slate-800 border-b border-slate-700 flex gap-2 animate-fade-in">
+              <input 
+                type="password" 
+                placeholder="Google Gemini API Key 입력" 
+                value={tempKey} 
+                onChange={e => setTempKey(e.target.value)}
+                className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none"
+              />
+              <button onClick={handleSaveKey} className="bg-cyan-600 text-white px-4 py-2 rounded text-sm hover:bg-cyan-500">저장</button>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl h-80">
-              <h3 className="text-lg font-bold text-white mb-4">카테고리 분포</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={stats.cats} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                    {stats.cats.map((e,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} stroke="none"/>)}
-                  </Pie>
-                  <RechartsTooltip contentStyle={{backgroundColor:'#0f172a', borderColor:'#334155', color:'#f1f5f9'}} formatter={v=>(v/3600).toFixed(1)+'h'} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-3 mt-2">
-                {stats.cats.map((e,i)=>(
-                  <div key={i} className="flex items-center gap-1 text-xs text-slate-400">
-                    <span className="w-2 h-2 rounded-full" style={{background:COLORS[i%COLORS.length]}}></span>{e.name}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    };
+          )}
 
-    // --- ForensicsView ---
-    const ForensicsView = ({ artifacts }) => {
-      const [filter, setFilter] = useState('ALL');
-      const filtered = artifacts.filter(a => filter==='ALL' || a.type===filter);
-      
-      const getIcon = (t) => {
-        if(t===ArtifactType.USB_DEVICE) return <Icons.Usb className="w-4 h-4 text-cyan-400"/>;
-        if(t===ArtifactType.RECENT_DOC) return <Icons.FileText className="w-4 h-4 text-indigo-400"/>;
-        return <Icons.FolderOpen className="w-4 h-4 text-yellow-400"/>;
-      };
-
-      return (
-        <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-3 gap-4">
-             <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex justify-between">
-               <div><p className="text-slate-400 text-xs font-bold">USB 연결</p><h3 className="text-2xl font-bold text-white">{artifacts.filter(a=>a.type===ArtifactType.USB_DEVICE).length}</h3></div>
-               <Icons.Usb className="w-8 h-8 text-cyan-400 opacity-50"/>
-             </div>
-             <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex justify-between">
-               <div><p className="text-slate-400 text-xs font-bold">고위험 파일</p><h3 className="text-2xl font-bold text-red-500">{artifacts.filter(a=>a.riskLevel==='HIGH').length}</h3></div>
-               <Icons.ShieldAlert className="w-8 h-8 text-red-400 opacity-50"/>
-             </div>
-          </div>
-          
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="p-4 border-b border-slate-800 flex gap-2">
-              {['ALL', ArtifactType.USB_DEVICE, ArtifactType.RECENT_DOC, ArtifactType.SHELLBAG].map(t => (
-                <button key={t} onClick={()=>setFilter(t)} className={`px-3 py-1.5 rounded text-xs font-bold transition-colors ${filter===t?'bg-slate-700 text-white':'text-slate-500 hover:text-slate-300'}`}>
-                  {t==='ALL'?'전체보기':t}
-                </button>
-              ))}
-            </div>
-            <div className="overflow-x-auto max-h-[500px]">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-950/50 text-slate-500 text-xs font-bold sticky top-0 backdrop-blur-sm">
-                  <tr>
-                    <th className="px-6 py-3">타임스탬프</th>
-                    <th className="px-6 py-3">유형</th>
-                    <th className="px-6 py-3">아티팩트 이름</th>
-                    <th className="px-6 py-3">경로 / 상세정보</th>
-                    <th className="px-6 py-3 text-right">위험도</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {filtered.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="px-6 py-3 text-slate-400 font-mono text-xs">{new Date(item.timestamp).toLocaleString()}</td>
-                      <td className="px-6 py-3 flex items-center gap-2">{getIcon(item.type)} {item.type}</td>
-                      <td className="px-6 py-3 text-white font-medium">{item.name}</td>
-                      <td className="px-6 py-3 text-slate-500 max-w-xs truncate" title={item.path}>{item.path}</td>
-                      <td className="px-6 py-3 text-right">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${item.riskLevel==='HIGH'?'bg-red-500/20 text-red-400': item.riskLevel==='MEDIUM'?'bg-yellow-500/20 text-yellow-400':'bg-slate-700 text-slate-400'}`}>
-                          {item.riskLevel}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    // --- AI Chat ---
-    const AIChat = ({ logs, artifacts }) => {
-      const [msg, setMsg] = useState([{role:'ai', text:'데이터 분석 준비 완료. 무엇이든 물어보세요.'}]);
-      const [input, setInput] = useState('');
-      const [loading, setLoading] = useState(false);
-      const endRef = useRef(null);
-
-      useEffect(()=>endRef.current?.scrollIntoView({behavior:'smooth'}), [msg]);
-
-      const send = async () => {
-        if(!input.trim() || loading) return;
-        const uMsg = input; setInput(''); setLoading(true);
-        setMsg(prev => [...prev, {role:'user', text:uMsg}]);
-        const res = await analyzeWithGemini(logs, artifacts, uMsg);
-        setMsg(prev => [...prev, {role:'ai', text:res}]);
-        setLoading(false);
-      };
-
-      return (
-        <div className="flex flex-col h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="p-4 bg-slate-800/50 border-b border-slate-700 font-bold text-white flex items-center gap-2">
-            <Icons.Sparkles className="w-5 h-5 text-cyan-400"/> Gemini 인텔리전스
-          </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {msg.map((m,i)=>(
-              <div key={i} className={`flex gap-3 ${m.role==='user'?'flex-row-reverse':''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role==='user'?'bg-indigo-500/20 text-indigo-400':'bg-cyan-500/20 text-cyan-400'}`}>
-                  {m.role==='user'?<Icons.User className="w-4 h-4"/>:<Icons.Bot className="w-4 h-4"/>}
+            {messages.map((m, i) => (
+              <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'user' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
+                  {m.role === 'user' ? <Icons.User className="w-4 h-4"/> : <Icons.Bot className="w-4 h-4"/>}
                 </div>
-                <div className={`max-w-[80%] p-3 rounded-lg text-sm whitespace-pre-wrap leading-relaxed ${m.role==='user'?'bg-indigo-900/40 text-indigo-100':'bg-slate-800 text-slate-200'}`}>
-                  {m.text}
+                <div className={`p-3 rounded-lg max-w-[80%] text-sm whitespace-pre-wrap ${m.role === 'user' ? 'bg-indigo-600/20 text-indigo-100' : 'bg-slate-800 text-slate-200 border border-slate-700'}`}>
+                  {m.content}
                 </div>
               </div>
             ))}
-            {loading && <div className="text-slate-500 text-sm ml-12 flex items-center gap-2"><Icons.Loader2 className="w-4 h-4"/> 분석 중...</div>}
-            <div ref={endRef}></div>
+            {loading && <div className="text-slate-500 text-sm ml-12 flex items-center gap-2"><Icons.Loader2 className="w-4 h-4 animate-spin"/> 분석 중...</div>}
           </div>
-          <div className="p-4 border-t border-slate-700 bg-slate-800/30 flex gap-2">
-            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} className="flex-1 bg-slate-950 border border-slate-700 rounded px-4 py-2 text-white focus:outline-none focus:border-cyan-500" placeholder="질문을 입력하세요..." />
-            <button onClick={send} className="px-4 bg-cyan-600 text-white rounded hover:bg-cyan-500"><Icons.Send className="w-5 h-5"/></button>
+
+          <div className="p-4 bg-slate-800/50 border-t border-slate-800 flex gap-2">
+            <input 
+              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+              placeholder="USB 기록이나 특이사항에 대해 물어보세요..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+            />
+            <button onClick={handleSend} disabled={loading} className="bg-cyan-600 text-white p-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50">
+              <Icons.Send className="w-5 h-5"/>
+            </button>
           </div>
         </div>
       );
     };
 
-    // --- MAIN APP ---
+    /*******************************************************
+     * COMPONENT: App (Main)
+     *******************************************************/
     const App = () => {
+      const [view, setView] = useState('UPLOAD');
       const [logs, setLogs] = useState([]);
       const [artifacts, setArtifacts] = useState([]);
-      const [view, setView] = useState(AppView.UPLOAD);
       const [scanning, setScanning] = useState(false);
-      const [step, setStep] = useState(0);
 
-      // 데모 로드 핸들러
-      const loadDemo = () => {
-        setLogs(generateMockData());
-        setArtifacts([]);
-        setView(AppView.DASHBOARD);
-      };
-
-      // 스캔 시뮬레이션
-      const startScan = () => {
+      const handleSimulate = () => {
         setScanning(true);
-        let s = 0;
-        const timer = setInterval(() => {
-          s++; setStep(s);
-          if(s >= 4) {
-            clearInterval(timer);
-            setLogs(generateMockData());
-            setArtifacts(generateForensicArtifacts());
-            setScanning(false);
-            setView(AppView.FORENSICS);
-          }
-        }, 800);
+        setTimeout(() => {
+          setLogs(generateMockData());
+          setArtifacts(generateForensicArtifacts());
+          setScanning(false);
+          setView('FORENSICS');
+        }, 2000);
       };
 
-      const handleUpload = (l, a) => {
-        setLogs(l); setArtifacts(a);
-        setView(a.length>0 ? AppView.FORENSICS : AppView.DASHBOARD);
+      const handleDownloadScript = () => {
+        const text = `# PowerShell Script for Data Collection\nWrite-Host "Collecting Data..."\n# (Logic omitted for brevity)\nStart-Sleep -s 1\nWrite-Host "Done. Save as forensics.json"`;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'collect_data.ps1';
+        a.click();
       };
 
-      // 스캔 로딩 화면
       if (scanning) {
-        const msgs = ['시스템 초기화...', '이벤트 로그 수집 중...', '레지스트리 셸백 분석 중...', 'USB 연결 이력 복원 중...', '보고서 생성 완료!'];
         return (
-          <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-            <div className="relative w-24 h-24 mb-8">
-              <div className="absolute inset-0 border-4 border-slate-800 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-cyan-500 rounded-full border-t-transparent animate-spin"></div>
-              <Icons.Activity className="absolute inset-0 m-auto w-10 h-10 text-cyan-400 animate-pulse"/>
-            </div>
-            <h2 className="text-2xl font-bold mb-2">디지털 포렌식 스캔 진행 중</h2>
-            <p className="text-cyan-400 font-mono">{msgs[step]}</p>
+          <div className="h-screen bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
+            <Icons.Loader2 className="w-12 h-12 text-cyan-400 animate-spin" />
+            <h2 className="text-xl font-bold">시스템 포렌식 스캔 중...</h2>
+            <p className="text-slate-400 text-sm">USB 히스토리, Shellbags, 최근 문서를 분석하고 있습니다.</p>
           </div>
         );
       }
 
-      // 업로드 화면
-      if (view === AppView.UPLOAD && logs.length === 0) {
-        return (
-          <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-4xl">
-              <header className="text-center mb-12 animate-fade-in-down">
-                <div className="flex justify-center items-center gap-3 mb-4">
-                  <Icons.Activity className="w-12 h-12 text-cyan-400"/>
-                  <h1 className="text-4xl font-bold text-white tracking-tight">LogSentinel AI</h1>
-                </div>
-                <p className="text-slate-400 text-lg">지능형 PC 로그 분석 및 디지털 포렌식 솔루션</p>
-              </header>
-              <FileUpload onUpload={handleUpload} onLoadDemo={loadDemo} onStartScan={startScan} />
-            </div>
-          </div>
-        );
-      }
-
-      // 메인 레이아웃
       return (
-        <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-          {/* 사이드바 */}
-          <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col z-20">
-            <div className="p-4 h-16 flex items-center gap-2 font-bold text-xl text-cyan-400 border-b border-slate-800">
-              <Icons.Activity className="w-6 h-6"/> LogSentinel
+        <div className="flex h-screen bg-slate-950 text-slate-100">
+          {/* Sidebar */}
+          <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
+            <div className="p-6 border-b border-slate-800 flex items-center gap-2 text-cyan-400 font-bold text-xl">
+              <Icons.Activity className="w-6 h-6" /> LogSentinel
             </div>
-            <nav className="p-4 space-y-2 flex-1">
-              <button onClick={()=>setView(AppView.DASHBOARD)} className={`w-full flex items-center gap-3 p-3 rounded transition-colors ${view===AppView.DASHBOARD?'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20':'hover:bg-slate-800 text-slate-400'}`}>
-                <Icons.LayoutDashboard className="w-5 h-5"/> 통합 대시보드
+            <nav className="flex-1 p-4 space-y-2">
+              <button onClick={() => setView('DASHBOARD')} className={`flex items-center gap-3 w-full p-3 rounded-lg ${view === 'DASHBOARD' ? 'bg-cyan-500/10 text-cyan-400' : 'text-slate-400 hover:text-white'}`}>
+                <Icons.LayoutDashboard className="w-5 h-5"/> 대시보드
               </button>
               {artifacts.length > 0 && (
-                <button onClick={()=>setView(AppView.FORENSICS)} className={`w-full flex items-center gap-3 p-3 rounded transition-colors ${view===AppView.FORENSICS?'bg-red-500/10 text-red-400 border border-red-500/20':'hover:bg-slate-800 text-red-400'}`}>
-                  <Icons.ScanSearch className="w-5 h-5"/> 포렌식 분석
+                <button onClick={() => setView('FORENSICS')} className={`flex items-center gap-3 w-full p-3 rounded-lg ${view === 'FORENSICS' ? 'bg-red-500/10 text-red-400' : 'text-slate-400 hover:text-white'}`}>
+                  <Icons.ScanSearch className="w-5 h-5"/> 포렌식 결과
                 </button>
               )}
-              <button onClick={()=>setView(AppView.ANALYSIS)} className={`w-full flex items-center gap-3 p-3 rounded transition-colors ${view===AppView.ANALYSIS?'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20':'hover:bg-slate-800 text-slate-400'}`}>
-                <Icons.BrainCircuit className="w-5 h-5"/> AI 인텔리전스
+              <button onClick={() => setView('ANALYSIS')} className={`flex items-center gap-3 w-full p-3 rounded-lg ${view === 'ANALYSIS' ? 'bg-cyan-500/10 text-cyan-400' : 'text-slate-400 hover:text-white'}`}>
+                <Icons.BrainCircuit className="w-5 h-5"/> AI 분석
               </button>
             </nav>
-            <div className="p-4 border-t border-slate-800">
-              <button onClick={()=>{setLogs([]);setArtifacts([]);setView(AppView.UPLOAD)}} className="w-full flex items-center gap-3 p-3 rounded text-slate-400 hover:text-white hover:bg-red-900/20">
-                <Icons.LogOut className="w-5 h-5"/> 세션 종료
-              </button>
-            </div>
           </aside>
 
-          {/* 메인 컨텐츠 */}
-          <main className="flex-1 flex flex-col overflow-hidden bg-slate-950 relative">
-            <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur flex items-center justify-between px-8 z-10">
-              <h2 className="text-lg font-bold text-white">
-                {view===AppView.DASHBOARD && 'PC 활동 개요'}
-                {view===AppView.FORENSICS && '디지털 증거 분석 보고서'}
-                {view===AppView.ANALYSIS && 'AI 기반 로그 분석'}
-              </h2>
-              <div className="text-xs text-slate-500 font-mono">
-                {logs.length} events loaded • {artifacts.length} artifacts found
+          {/* Main Content */}
+          <main className="flex-1 overflow-auto p-8">
+            {view === 'UPLOAD' && (
+              <div className="max-w-2xl mx-auto space-y-8 mt-20">
+                <div className="text-center space-y-4">
+                  <h1 className="text-4xl font-bold text-white">LogSentinel Forensic AI</h1>
+                  <p className="text-slate-400">PC 사용 기록 및 디지털 흔적(Artifact)을 분석합니다.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <button onClick={handleSimulate} className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-6 rounded-xl font-bold text-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-3">
+                    <Icons.ScanSearch className="w-6 h-6" /> 포렌식 시뮬레이션 시작
+                  </button>
+                  <button onClick={handleDownloadScript} className="bg-slate-800 text-slate-300 p-4 rounded-xl border border-slate-700 hover:bg-slate-700 flex items-center justify-center gap-2">
+                    <Icons.Terminal className="w-5 h-5" /> 실제 데이터 수집 스크립트 다운로드
+                  </button>
+                </div>
               </div>
-            </header>
-            <div className="flex-1 overflow-auto p-6">
-              <div className="max-w-7xl mx-auto">
-                {view===AppView.DASHBOARD && <Dashboard logs={logs} />}
-                {view===AppView.FORENSICS && <ForensicsView artifacts={artifacts} />}
-                {view===AppView.ANALYSIS && <AIChat logs={logs} artifacts={artifacts} />}
+            )}
+
+            {view === 'DASHBOARD' && logs.length > 0 && <Dashboard logs={logs} />}
+            
+            {view === 'FORENSICS' && (
+              <div className="space-y-6 animate-fade-in">
+                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2"><Icons.ShieldAlert className="text-red-500"/> 포렌식 아티팩트 분석</h2>
+                <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-sm text-slate-400">
+                    <thead className="bg-slate-950 text-slate-500 uppercase font-bold text-xs">
+                      <tr><th className="p-4">유형</th><th className="p-4">이름</th><th className="p-4">경로/상세</th><th className="p-4">위험도</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {artifacts.map((a, i) => (
+                        <tr key={i} className="hover:bg-slate-800/50">
+                          <td className="p-4 flex items-center gap-2 text-white">
+                            {a.type === 'USB_DEVICE' && <Icons.Usb className="w-4 h-4"/>}
+                            {a.type === 'RECENT_DOC' && <Icons.FileText className="w-4 h-4"/>}
+                            {a.type === 'SHELLBAG' && <Icons.FolderOpen className="w-4 h-4"/>}
+                            {a.type}
+                          </td>
+                          <td className="p-4 text-white font-medium">{a.name}</td>
+                          <td className="p-4 font-mono text-xs">{a.path}</td>
+                          <td className="p-4"><span className={`px-2 py-1 rounded text-xs ${a.riskLevel === 'HIGH' ? 'bg-red-500/20 text-red-400' : 'bg-slate-700 text-slate-300'}`}>{a.riskLevel}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
+
+            {view === 'ANALYSIS' && <AIAnalysis logs={logs} artifacts={artifacts} />}
           </main>
         </div>
       );
     };
 
-    // React Mount
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    /*******************************************************
+     * STARTUP & SAFETY CHECK
+     *******************************************************/
+    // Recharts와 React가 브라우저에 완전히 로드되었는지 확인 후 실행
+    const waitForGlobals = () => {
+      if (window.Recharts && window.React && window.ReactDOM) {
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+      } else {
+        console.log("Waiting for libraries...");
+        setTimeout(waitForGlobals, 50);
+      }
+    };
+
+    waitForGlobals();
+
   </script>
 </body>
 </html>
