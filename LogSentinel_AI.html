@@ -17,12 +17,11 @@
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     .animate-fade-in { animation: fadeIn 0.5s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   </style>
 
-  <!-- UMD Libraries (No Build/Import Required) -->
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.0/Recharts.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script type="importmap">
 {
@@ -38,7 +37,6 @@
 </head>
 <body>
   <div id="root" class="h-screen w-screen flex flex-col overflow-hidden bg-slate-950 text-white flex items-center justify-center">
-    <!-- Initial Loading State -->
     <div class="text-center animate-pulse">
       <div class="text-cyan-500 font-bold text-xl mb-2">시스템 초기화 중...</div>
       <div class="text-slate-500 text-sm">라이브러리 로딩 대기</div>
@@ -48,9 +46,7 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
     
-    /* ---------------------------------------------------------------------------
-     *  ICONS (Inline SVG for reliability)
-     * --------------------------------------------------------------------------- */
+    // ICONS (Inline SVG)
     const Icons = {
       Activity: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
       ShieldAlert: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
@@ -76,12 +72,11 @@
       Menu: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
       Clock: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
       MapPin: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
-      ActivityIcon: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      FileJson: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+      AlertCircle: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     };
 
-    /* ---------------------------------------------------------------------------
-     *  SERVICES (Gemini API)
-     * --------------------------------------------------------------------------- */
+    // SERVICES (Gemini API)
     const analyzeLogsWithGemini = async (logs, artifacts, userPrompt, apiKey) => {
       if (!apiKey) throw new Error("API Key가 필요합니다.");
       
@@ -109,20 +104,23 @@
       }
     };
 
-    /* ---------------------------------------------------------------------------
-     *  COMPONENTS
-     * --------------------------------------------------------------------------- */
-    
-    // 2. Forensics View
+    // COMPONENTS
+
     const ForensicsView = ({ artifacts }) => {
       const [filter, setFilter] = useState('ALL');
       const [searchTerm, setSearchTerm] = useState('');
 
-      const filtered = artifacts.filter(item => {
-        const matchesTab = filter === 'ALL' || item.type === filter;
-        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesTab && matchesSearch;
-      });
+      const filtered = useMemo(() => {
+        return artifacts.filter(item => {
+          const matchesTab = filter === 'ALL' || item.type === filter;
+          const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+          return matchesTab && matchesSearch;
+        }).sort((a, b) => {
+          const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+          const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          return dateB - dateA;
+        });
+      }, [artifacts, filter, searchTerm]);
 
       const getIcon = (type) => {
         switch (type) {
@@ -163,7 +161,6 @@
             </div>
           </div>
 
-          {/* MOBILE CARD VIEW (Visible only on small screens) */}
           <div className="md:hidden space-y-4">
             {filtered.map((item, i) => (
               <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-3">
@@ -195,7 +192,7 @@
                         </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                        <Icons.ActivityIcon className="w-4 h-4 text-slate-500 shrink-0"/>
+                        <Icons.Activity className="w-4 h-4 text-slate-500 shrink-0"/>
                         <span className="text-slate-300"><span className="text-slate-500 mr-2">행위:</span> {item.action || '알 수 없음'}</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs">
@@ -208,13 +205,12 @@
             {filtered.length === 0 && <div className="text-center py-10 text-slate-500 text-sm">표시할 데이터가 없습니다.</div>}
           </div>
 
-          {/* DESKTOP TABLE VIEW (Visible only on medium+ screens) */}
           <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-400">
                 <thead className="bg-slate-950/50 text-slate-500 uppercase font-bold text-xs">
                   <tr>
-                    <th className="p-4 text-cyan-500">최종열람일자</th>
+                    <th className="p-4 text-cyan-500">최종활동일시</th>
                     <th className="p-4">유형</th>
                     <th className="p-4">이름</th>
                     <th className="p-4">행위 (Action)</th>
@@ -253,7 +249,6 @@
       );
     };
 
-    // 3. AI Analysis
     const AIAnalysis = ({ logs, artifacts }) => {
       const [messages, setMessages] = useState([{ role: 'ai', content: '데이터 분석 준비 완료. USB 기록이나 특이사항에 대해 질문해주세요.' }]);
       const [input, setInput] = useState('');
@@ -339,7 +334,6 @@
       );
     };
 
-    // 4. File Upload (REAL ANALYSIS ONLY)
     const FileUpload = ({ onStartAnalysis, onDownloadScript }) => {
       const fileInputRef = useRef(null);
       const [isDragging, setIsDragging] = useState(false);
@@ -420,7 +414,6 @@
       );
     };
 
-    // 5. Main App Logic
     const App = () => {
       const [view, setView] = useState('UPLOAD');
       const [logs, setLogs] = useState([]);
@@ -448,31 +441,33 @@
       };
 
       const handleDownloadScript = () => {
+        // Correctly escaped PowerShell script for JS template literal
         const script = `
-$ErrorActionPreference = "SilentlyContinue"
+\$ErrorActionPreference = "SilentlyContinue"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Write-Host "LogSentinel Forensic Collector Started..." -ForegroundColor Cyan
 
-$data = @{ logs = @(); artifacts = @() }
+\$data = @{ logs = @(); artifacts = @() }
 
 function Add-Artifact {
-    param($type, $name, $path, $action, $risk, $timestamp)
-    $ts = if ($timestamp) { $timestamp } else { (Get-Date).ToString("o") }
-    $data.artifacts += @{
+    param(\$type, \$name, \$path, \$action, \$risk, \$timestamp)
+    \$ts = if (\$timestamp) { \$timestamp } else { (Get-Date).ToString("o") }
+    \$data.artifacts += @{
         id = [Guid]::NewGuid().ToString()
-        timestamp = $ts
-        type = $type
-        name = $name
-        path = $path
-        action = $action
-        riskLevel = $risk
+        timestamp = \$ts
+        type = \$type
+        name = \$name
+        path = \$path
+        action = \$action
+        riskLevel = \$risk
     }
 }
 
 # ============================================
-# Known Folder GUID → 실제 경로 매핑
+# Known Folder GUID -> 실제 경로 매핑
 # ============================================
-$KnownFolders = @{
+\$KnownFolders = @{
+    # 주요 시스템 폴더 GUID
     "{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" = [Environment]::GetFolderPath('Desktop')
     "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}" = [Environment]::GetFolderPath('MyDocuments')
     "{374DE290-123F-4565-9164-39C4925E467B}" = "\$env:USERPROFILE\\Downloads"
@@ -503,182 +498,167 @@ $KnownFolders = @{
 # Shellbag 바이너리 파싱 함수
 # ============================================
 function Parse-ShellItem {
-    param([byte[]]$bytes)
+    param([byte[]]\$bytes)
     
-    if (-not $bytes -or $bytes.Length -lt 4) { return $null }
+    if (-not \$bytes -or \$bytes.Length -lt 4) { return \$null }
     
-    $result = @{
-        FolderName = $null
-        FullPath = $null
+    \$result = @{
+        FolderName = \$null
+        FullPath = \$null
         FolderType = "Unknown"
     }
     
     try {
-        $size = [BitConverter]::ToUInt16($bytes, 0)
-        if ($size -lt 3) { return $null }
+        \$size = [BitConverter]::ToUInt16(\$bytes, 0)
+        if (\$size -lt 3) { return \$null }
         
-        $type = $bytes[2]
+        \$type = \$bytes[2]
         
-        # 드라이브 (0x2F, 0x23, 0x25, 0x29)
-        if ($type -in @(0x2F, 0x23, 0x25, 0x29, 0x2E)) {
-            $result.FolderType = "Drive"
-            if ($bytes.Length -gt 3) {
-                $driveLetter = [char]$bytes[3]
-                if ($driveLetter -match '[A-Za-z]') {
-                    $result.FolderName = "\${driveLetter}:"
-                    $result.FullPath = "\${driveLetter}:\\"
+        # 드라이브
+        if (\$type -in @(0x2F, 0x23, 0x25, 0x29, 0x2E)) {
+            \$result.FolderType = "Drive"
+            if (\$bytes.Length -gt 3) {
+                \$driveLetter = [char]\$bytes[3]
+                if (\$driveLetter -match '[A-Za-z]') {
+                    \$result.FolderName = "\${driveLetter}:"
+                    \$result.FullPath = "\${driveLetter}:\\"
                 }
             }
         }
-        # GUID 기반 폴더 (0x1F)
-        elseif ($type -eq 0x1F -and $bytes.Length -ge 18) {
-            $result.FolderType = "Special Folder"
+        # GUID 폴더
+        elseif (\$type -eq 0x1F -and \$bytes.Length -ge 18) {
+            \$result.FolderType = "Special Folder"
             try {
-                $guidBytes = $bytes[4..19]
-                $guid = [Guid]::new($guidBytes)
-                $guidStr = "{$($guid.ToString().ToUpper())}"
+                \$guidBytes = \$bytes[4..19]
+                \$guid = [Guid]::new(\$guidBytes)
+                \$guidStr = "{\$([string]\$guid).ToUpper()}"
                 
-                if ($KnownFolders.ContainsKey($guidStr)) {
-                    $result.FullPath = $KnownFolders[$guidStr]
-                    $result.FolderName = Split-Path $result.FullPath -Leaf
-                    if (-not $result.FolderName) { $result.FolderName = $result.FullPath }
+                if (\$KnownFolders.ContainsKey(\$guidStr)) {
+                    \$result.FullPath = \$KnownFolders[\$guidStr]
+                    \$result.FolderName = Split-Path \$result.FullPath -Leaf
+                    if (-not \$result.FolderName) { \$result.FolderName = \$result.FullPath }
                 } else {
-                    $result.FolderName = "GUID: $guidStr"
-                    $result.FullPath = $guidStr
+                    \$result.FolderName = "GUID: \$guidStr"
+                    \$result.FullPath = \$guidStr
                 }
             } catch {
-                $result.FolderName = "Special Folder"
+                \$result.FolderName = "Special Folder"
             }
         }
-        # 일반 폴더 - 유니코드 (0x32, 0x36, 0x3A)
-        elseif ($type -in @(0x32, 0x36, 0x3A, 0x34, 0x35, 0x31, 0x30, 0x74, 0x76)) {
-            $result.FolderType = if ($type -in @(0x74, 0x76)) { "File" } else { "Folder" }
-            $unicodeName = ""
-            $startOffset = -1
-            for ($i = 4; $i -lt $bytes.Length - 10; $i++) {
-                if ($bytes[$i] -ge 0x04 -and $bytes[$i] -le 0x09 -and $bytes[$i+1] -eq 0x00) {
-                    $testStart = $i + 2
-                    if ($testStart -lt $bytes.Length - 4) {
-                        $extSize = [BitConverter]::ToUInt16($bytes, $i)
-                        if ($extSize -gt 0 -and $extSize -lt 200) {
-                            $startOffset = $i
-                            break
-                        }
-                    }
+        # 일반 폴더
+        elseif (\$type -in @(0x32, 0x36, 0x3A, 0x34, 0x35, 0x31, 0x30, 0x74, 0x76)) {
+            \$result.FolderType = if (\$type -in @(0x74, 0x76)) { "File" } else { "Folder" }
+            
+            \$unicodeName = ""
+            
+            for (\$i = 4; \$i -lt \$bytes.Length - 10; \$i++) {
+                if (\$bytes[\$i] -ge 0x04 -and \$bytes[\$i] -le 0x09 -and \$bytes[\$i+1] -eq 0x00) {
+                     # Logic to find unicode end would go here
                 }
             }
-            for ($i = [Math]::Min($bytes.Length - 2, 200); $i -gt 10; $i -= 2) {
-                if ($bytes[$i] -eq 0 -and $bytes[$i+1] -eq 0) {
-                    $strEnd = $i
-                    $strStart = $i
-                    for ($j = $i - 2; $j -gt 4; $j -= 2) {
-                        $char = [BitConverter]::ToUInt16($bytes, $j)
-                        if ($char -ge 32 -and $char -lt 65535 -and $char -ne 0xFFFF) {
-                            $strStart = $j
+            
+            # Simple Unicode Extraction from end
+            for (\$i = [Math]::Min(\$bytes.Length - 2, 200); \$i -gt 10; \$i -= 2) {
+                if (\$bytes[\$i] -eq 0 -and \$bytes[\$i+1] -eq 0) {
+                    \$strEnd = \$i
+                    \$strStart = \$i
+                    for (\$j = \$i - 2; \$j -gt 4; \$j -= 2) {
+                        \$char = [BitConverter]::ToUInt16(\$bytes, \$j)
+                        if (\$char -ge 32 -and \$char -lt 65535 -and \$char -ne 0xFFFF) {
+                            \$strStart = \$j
                         } else {
                             break
                         }
                     }
-                    if ($strEnd - $strStart -ge 4) {
+                    if (\$strEnd - \$strStart -ge 4) {
                         try {
-                            $unicodeName = [System.Text.Encoding]::Unicode.GetString($bytes[$strStart..$strEnd])
-                            $unicodeName = $unicodeName.Trim([char]0)
-                            if ($unicodeName.Length -gt 1 -and $unicodeName -notmatch '[\\x00-\\x1F]') {
-                                $result.FolderName = $unicodeName
+                            \$unicodeName = [System.Text.Encoding]::Unicode.GetString(\$bytes[\$strStart..\$strEnd])
+                            \$unicodeName = \$unicodeName.Trim([char]0)
+                            if (\$unicodeName.Length -gt 1 -and \$unicodeName -notmatch '[\\x00-\\x1F]') {
+                                \$result.FolderName = \$unicodeName
                                 break
                             }
                         } catch {}
                     }
                 }
             }
-            if (-not $result.FolderName) {
-                $asciiName = ""
-                $inString = $false
-                for ($i = 3; $i -lt [Math]::Min($bytes.Length, 50); $i++) {
-                    $b = $bytes[$i]
-                    if ($b -ge 32 -and $b -lt 127) {
-                        $asciiName += [char]$b
-                        $inString = $true
-                    } elseif ($inString -and $b -eq 0 -and $asciiName.Length -gt 1) {
+            
+            if (-not \$result.FolderName) {
+                \$asciiName = ""
+                \$inString = \$false
+                for (\$i = 3; \$i -lt [Math]::Min(\$bytes.Length, 50); \$i++) {
+                    \$b = \$bytes[\$i]
+                    if (\$b -ge 32 -and \$b -lt 127) {
+                        \$asciiName += [char]\$b
+                        \$inString = \$true
+                    } elseif (\$inString -and \$b -eq 0 -and \$asciiName.Length -gt 1) {
                         break
-                    } elseif ($b -eq 0 -and $asciiName.Length -gt 0) {
+                    } elseif (\$b -eq 0 -and \$asciiName.Length -gt 0) {
                     } else {
-                        $asciiName = ""
-                        $inString = $false
+                        \$asciiName = ""
+                        \$inString = \$false
                     }
                 }
-                if ($asciiName.Length -gt 1) {
-                    $result.FolderName = $asciiName.Trim()
+                if (\$asciiName.Length -gt 1) {
+                    \$result.FolderName = \$asciiName.Trim()
                 }
             }
         }
-        # 네트워크 (0xC3, 0x41, 0x42, 0x46, 0x47)
-        elseif ($type -in @(0xC3, 0x41, 0x42, 0x46, 0x47)) {
-            $result.FolderType = "Network"
-            $netPath = ""
-            for ($i = 3; $i -lt $bytes.Length; $i++) {
-                $b = $bytes[$i]
-                if ($b -ge 32 -and $b -lt 127) {
-                    $netPath += [char]$b
-                } elseif ($b -eq 0 -and $netPath.Length -gt 2) {
-                    break
-                }
-            }
-            if ($netPath) {
-                $result.FolderName = $netPath
-                $result.FullPath = $netPath
-            }
-        }
+        
     } catch {}
-    if ($result.FolderName) {
-        $result.FolderName = $result.FolderName -replace '[\\x00-\\x1F]', ''
-        $result.FolderName = $result.FolderName.Trim()
+    
+    if (\$result.FolderName) {
+        \$result.FolderName = \$result.FolderName -replace '[\\x00-\\x1F]', ''
+        \$result.FolderName = \$result.FolderName.Trim()
     }
-    return $result
+    
+    return \$result
 }
 
-# ============================================
-# BagMRU 재귀 파싱
-# ============================================
 function Parse-BagMRU {
-    param(
-        [string]$regPath, 
-        [string]$parentFullPath = "", 
-        [int]$depth = 0
-    )
-    if ($depth -gt 15 -or -not (Test-Path $regPath)) { return }
+    param([string]\$regPath, [string]\$parentFullPath = "", [int]\$depth = 0)
+    
+    if (\$depth -gt 15 -or -not (Test-Path \$regPath)) { return }
+    
     try {
-        $props = Get-ItemProperty -Path $regPath -ErrorAction SilentlyContinue
-        $key = Get-Item -Path $regPath -ErrorAction SilentlyContinue
-        $key.Property | Where-Object { $_ -match '^\d+$' } | Sort-Object { [int]$_ } | ForEach-Object {
-            $valueName = $_
-            $bytes = $props.$valueName
-            if ($bytes -and $bytes -is [byte[]]) {
-                $parsed = Parse-ShellItem -bytes $bytes
-                if ($parsed -and $parsed.FolderName) {
-                    if ($parsed.FullPath) {
-                        $fullPath = $parsed.FullPath
-                    } elseif ($parentFullPath) {
-                        $fullPath = Join-Path $parentFullPath $parsed.FolderName
+        \$props = Get-ItemProperty -Path \$regPath -ErrorAction SilentlyContinue
+        \$key = Get-Item -Path \$regPath -ErrorAction SilentlyContinue
+        
+        \$key.Property | Where-Object { \$_ -match '^\d+\$' } | Sort-Object { [int]\$_ } | ForEach-Object {
+            \$valueName = \$_
+            \$bytes = \$props.\$valueName
+            
+            if (\$bytes -and \$bytes -is [byte[]]) {
+                \$parsed = Parse-ShellItem -bytes \$bytes
+                
+                if (\$parsed -and \$parsed.FolderName) {
+                    if (\$parsed.FullPath) {
+                        \$fullPath = \$parsed.FullPath
+                    } elseif (\$parentFullPath) {
+                        \$fullPath = Join-Path \$parentFullPath \$parsed.FolderName
                     } else {
-                        $fullPath = $parsed.FolderName
+                        \$fullPath = \$parsed.FolderName
                     }
-                    $fullPath = $fullPath -replace '\\\\\\\\', '\\\\'
-                    $ts = (Get-Date).ToString("o")
+                    
+                    \$fullPath = \$fullPath -replace '\\\\\\\\', '\\\\'
+                    
+                    \$ts = (Get-Date).ToString("o")
                     try {
-                        $subKeyPath = "$regPath\\$valueName"
-                        if (Test-Path $subKeyPath) {
-                            $subKey = Get-Item $subKeyPath -ErrorAction SilentlyContinue
-                            if ($subKey.LastWriteTime) {
-                                $ts = $subKey.LastWriteTime.ToString("o")
+                        \$subKeyPath = "\$regPath\\\$valueName"
+                        if (Test-Path \$subKeyPath) {
+                            \$subKey = Get-Item \$subKeyPath -ErrorAction SilentlyContinue
+                            if (\$subKey.LastWriteTime) {
+                                \$ts = \$subKey.LastWriteTime.ToString("o")
                             }
                         }
                     } catch {}
-                    Add-Artifact "SHELLBAG" $parsed.FolderName $fullPath "Type: $($parsed.FolderType)" "MEDIUM" $ts
-                    $subKeyPath = "$regPath\\$valueName"
-                    if (Test-Path $subKeyPath) {
-                        $nextParent = if ($parsed.FullPath) { $parsed.FullPath } else { $fullPath }
-                        Parse-BagMRU -regPath $subKeyPath -parentFullPath $nextParent -depth ($depth + 1)
+                    
+                    Add-Artifact "SHELLBAG" \$parsed.FolderName \$fullPath "Type: \$(\$parsed.FolderType)" "MEDIUM" \$ts
+                    
+                    \$subKeyPath = "\$regPath\\\$valueName"
+                    if (Test-Path \$subKeyPath) {
+                        \$nextParent = if (\$parsed.FullPath) { \$parsed.FullPath } else { \$fullPath }
+                        Parse-BagMRU -regPath \$subKeyPath -parentFullPath \$nextParent -depth (\$depth + 1)
                     }
                 }
             }
@@ -686,109 +666,85 @@ function Parse-BagMRU {
     } catch {}
 }
 
-# ============================================
 # 1. RECENT DOCS
-# ============================================
 Write-Host "[-] Scanning Recent Docs..." -NoNewline
 try {
-    $wsh = New-Object -ComObject WScript.Shell
-    $recentPath = [Environment]::GetFolderPath('Recent')
-    Get-ChildItem $recentPath -Filter "*.lnk" -ErrorAction SilentlyContinue | 
-        Sort-Object LastWriteTime -Descending | 
-        Select-Object -First 50 | 
-        ForEach-Object {
-            try {
-                $sc = $wsh.CreateShortcut($_.FullName)
-                if ($sc.TargetPath) { 
-                    Add-Artifact "RECENT_DOC" $_.BaseName $sc.TargetPath "LNK Target" "MEDIUM" $_.LastWriteTime.ToString("o") 
-                }
-            } catch {}
-        }
-    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($wsh) | Out-Null
-    Write-Host " Done." -ForegroundColor Green
-} catch { Write-Host " Error." -ForegroundColor Red }
-
-# ============================================
-# 2. SHELLBAG 수집
-# ============================================
-Write-Host "[-] Scanning Shellbags..." -NoNewline
-try {
-    $shellbagPaths = @(
-        "HKCU:\\Software\\Microsoft\\Windows\\Shell\\BagMRU",
-        "HKCU:\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\BagMRU"
-    )
-    foreach ($path in $shellbagPaths) {
-        if (Test-Path $path) {
-            Parse-BagMRU -regPath $path -parentFullPath "" -depth 0
-        }
-    }
-    Write-Host " Done." -ForegroundColor Green
-} catch { Write-Host " Error: $_" -ForegroundColor Red }
-
-# ============================================
-# 3. EXPLORER HISTORY
-# ============================================
-Write-Host "[-] Scanning Explorer History..." -NoNewline
-try {
-    $typedPathsReg = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\TypedPaths"
-    if (Test-Path $typedPathsReg) {
-        $props = Get-ItemProperty $typedPathsReg
-        $props.PSObject.Properties | Where-Object { $_.Name -match "^url\d+" } | ForEach-Object {
-            if ($_.Value) { 
-                $folderName = Split-Path $_.Value -Leaf
-                if (-not $folderName) { $folderName = $_.Value }
-                Add-Artifact "SHELLBAG" $folderName $_.Value "Address Bar (TypedPath)" "MEDIUM" (Get-Date).ToString("o")
-            }
-        }
-    }
-    $runMRUReg = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
-    if (Test-Path $runMRUReg) {
-        $props = Get-ItemProperty $runMRUReg
-        $props.PSObject.Properties | Where-Object { $_.Name -match "^[a-z]$" } | ForEach-Object {
-            if ($_.Value) { 
-                $cmd = $_.Value -replace "\\\\1$", ""
-                Add-Artifact "EXPLORER_HISTORY" $cmd $cmd "Run Command" "HIGH" (Get-Date).ToString("o")
-            }
-        }
-    }
-    Write-Host " Done." -ForegroundColor Green
-} catch { Write-Host " Error." -ForegroundColor Red }
-
-# ============================================
-# 4. USB HISTORY
-# ============================================
-Write-Host "[-] Scanning USB History..." -NoNewline
-try {
-    $devs = Get-PnpDevice -Class 'USB' -ErrorAction SilentlyContinue | 
-            Where-Object { $_.FriendlyName -and $_.FriendlyName -notmatch 'Hub|Controller|Composite|Root|Intel|AMD|Host|Virtual' }
-    foreach ($d in $devs) {
-        $lastDate = "Unknown"
-        $ts = (Get-Date).ToString("o")
+    \$wsh = New-Object -ComObject WScript.Shell
+    \$recentPath = [Environment]::GetFolderPath('Recent')
+    Get-ChildItem \$recentPath -Filter "*.lnk" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 50 | ForEach-Object {
         try {
-            $p = Get-PnpDeviceProperty -InstanceId $d.InstanceId -KeyName "{83da6326-97a6-4088-9453-a1923f573b29} 102" -ErrorAction SilentlyContinue
-            if ($p.Data) { 
-                $dt = [DateTime]$p.Data
-                $lastDate = $dt.ToString("yyyy-MM-dd HH:mm:ss")
-                $ts = $dt.ToString("o") 
+            \$sc = \$wsh.CreateShortcut(\$_.FullName)
+            if (\$sc.TargetPath) { 
+                Add-Artifact "RECENT_DOC" \$_.BaseName \$sc.TargetPath "LNK Target" "MEDIUM" \$_.LastWriteTime.ToString("o") 
             }
         } catch {}
-        Add-Artifact "USB_DEVICE" $d.FriendlyName $d.InstanceId "Last: $lastDate" "HIGH" $ts
+    }
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$wsh) | Out-Null
+    Write-Host " Done." -ForegroundColor Green
+} catch { Write-Host " Error." -ForegroundColor Red }
+
+# 2. SHELLBAG
+Write-Host "[-] Scanning Shellbags..." -NoNewline
+try {
+    \$shellbagPaths = @("HKCU:\\Software\\Microsoft\\Windows\\Shell\\BagMRU", "HKCU:\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\BagMRU")
+    foreach (\$path in \$shellbagPaths) {
+        if (Test-Path \$path) { Parse-BagMRU -regPath \$path -parentFullPath "" -depth 0 }
+    }
+    Write-Host " Done." -ForegroundColor Green
+} catch { Write-Host " Error: \$_" -ForegroundColor Red }
+
+# 3. EXPLORER HISTORY
+Write-Host "[-] Scanning Explorer History..." -NoNewline
+try {
+    \$typedPathsReg = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\TypedPaths"
+    if (Test-Path \$typedPathsReg) {
+        \$props = Get-ItemProperty \$typedPathsReg
+        \$props.PSObject.Properties | Where-Object { \$_.Name -match "^url\d+" } | ForEach-Object {
+            if (\$_.Value) { 
+                \$folderName = Split-Path \$_.Value -Leaf
+                if (-not \$folderName) { \$folderName = \$_.Value }
+                Add-Artifact "EXPLORER_HISTORY" \$folderName \$_.Value "Address Bar" "MEDIUM" 
+            }
+        }
+    }
+    \$runMRUReg = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
+    if (Test-Path \$runMRUReg) {
+        \$props = Get-ItemProperty \$runMRUReg
+        \$props.PSObject.Properties | Where-Object { \$_.Name -match "^[a-z]\$" } | ForEach-Object {
+            if (\$_.Value) { 
+                \$cmd = \$_.Value -replace "\\\\1\$", ""
+                Add-Artifact "EXPLORER_HISTORY" \$cmd \$cmd "Run Command" "HIGH" 
+            }
+        }
     }
     Write-Host " Done." -ForegroundColor Green
 } catch { Write-Host " Error." -ForegroundColor Red }
 
-# ============================================
-# 결과 저장
-# ============================================
-$out = "$PWD\\forensics_data.json"
-$data | ConvertTo-Json -Depth 5 | Out-File $out -Encoding utf8
+# 4. USB HISTORY
+Write-Host "[-] Scanning USB History..." -NoNewline
+try {
+    \$devs = Get-PnpDevice -Class 'USB' -ErrorAction SilentlyContinue | Where-Object { \$_.FriendlyName -and \$_.FriendlyName -notmatch 'Hub|Controller|Composite|Root|Intel|AMD|Host|Virtual' }
+    foreach (\$d in \$devs) {
+        \$lastDate = "Unknown"
+        \$ts = (Get-Date).ToString("o")
+        try {
+            \$p = Get-PnpDeviceProperty -InstanceId \$d.InstanceId -KeyName "{83da6326-97a6-4088-9453-a1923f573b29} 102" -ErrorAction SilentlyContinue
+            if (\$p.Data) { 
+                \$dt = [DateTime]\$p.Data
+                \$lastDate = \$dt.ToString("yyyy-MM-dd HH:mm:ss")
+                \$ts = \$dt.ToString("o") 
+            }
+        } catch {}
+        Add-Artifact "USB_DEVICE" \$d.FriendlyName \$d.InstanceId "Last: \$lastDate" "HIGH" \$ts
+    }
+    Write-Host " Done." -ForegroundColor Green
+} catch { Write-Host " Error." -ForegroundColor Red }
 
-Write-Host ""
-Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "[+] Total Artifacts: $($data.artifacts.Count)" -ForegroundColor Green
-Write-Host "[+] Saved to: $out" -ForegroundColor Green
-Write-Host "============================================" -ForegroundColor Cyan
-Start-Sleep -Seconds 5
+# SAVE
+\$out = "\$PWD\\forensics_data.json"
+\$data | ConvertTo-Json -Depth 5 | Out-File \$out -Encoding utf8
+Write-Host "[+] Saved to: \$out" -ForegroundColor Green
+Start-Sleep -Seconds 3
 `;
         const blob = new Blob([script], { type: 'text/plain' });
         const a = document.createElement('a');
@@ -797,7 +753,6 @@ Start-Sleep -Seconds 5
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
       };
 
-      // Loading Animation
       if(scanning) {
          const msgs = ["데이터 분석 초기화...", "시스템 로그 파싱 중...", "레지스트리 아티팩트 정밀 분석...", "USB 장치 이력 스캔...", "최근 접근 파일 및 위험도 평가...", "보고서 생성 중..."];
          return (
@@ -824,13 +779,11 @@ Start-Sleep -Seconds 5
 
       return (
         <div className="flex flex-col md:flex-row h-screen bg-slate-950 text-slate-100 overflow-hidden">
-          {/* Mobile Header */}
           <div className="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shrink-0 shadow-md">
              <div className="font-bold text-cyan-400 flex items-center gap-2"><Icons.Activity className="w-5 h-5"/> LogSentinel</div>
              <button onClick={()=>setSidebarOpen(!sidebarOpen)} className="text-slate-400 p-2"><Icons.Menu className="w-6 h-6"/></button>
           </div>
 
-          {/* Sidebar */}
           <aside className={`
             fixed inset-y-0 left-0 bg-slate-900 border-r border-slate-800 z-10 transition-transform duration-300 shadow-2xl
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -861,7 +814,6 @@ Start-Sleep -Seconds 5
       );
     };
 
-    // Safe Loading Wrapper
     const waitForGlobals = () => {
       if (window.React && window.ReactDOM) {
          const root = ReactDOM.createRoot(document.getElementById('root'));
