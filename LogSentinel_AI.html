@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -499,6 +498,21 @@ Write-Host "Starting Advanced Forensic Collection..." -ForegroundColor Cyan
 
 $data = @{ logs = @(); artifacts = @() }
 
+# Helper to add artifact with optional custom date
+function Add-Artifact {
+    param($type, $name, $path, $action, $risk, $customDate)
+    $ts = if ($customDate) { $customDate } else { (Get-Date).ToString("o") }
+    $data.artifacts += @{
+        id = [Guid]::NewGuid().ToString()
+        timestamp = $ts
+        type = $type
+        name = $name
+        path = $path
+        action = $action
+        riskLevel = $risk
+    }
+}
+
 # 1. Recent Docs (Target Parsing)
 Write-Host "[-] Scanning Recent Docs..."
 $recentPath = "$env:APPDATA\\Microsoft\\Windows\\Recent"
@@ -509,12 +523,7 @@ if (Test-Path $recentPath) {
             try {
                 $lnk = $wsh.CreateShortcut($_.FullName)
                 if ($lnk.TargetPath) {
-                    $data.artifacts += @{
-                        id = [Guid]::NewGuid().ToString(); type = "RECENT_DOC";
-                        timestamp = $_.LastAccessTime.ToString("o");
-                        name = $_.Name.Replace(".lnk",""); path = $lnk.TargetPath;
-                        action = "Accessed"; riskLevel = "UNKNOWN"
-                    }
+                    Add-Artifact "RECENT_DOC" $_.Name.Replace(".lnk","") $lnk.TargetPath "Accessed" "UNKNOWN" $_.LastAccessTime.ToString("o")
                 }
             } catch {}
         }
@@ -528,25 +537,33 @@ if (Test-Path $regPath) {
     Get-ItemProperty $regPath | Get-Member -MemberType NoteProperty | Where-Object { $_.Name -match "^url" } | ForEach-Object {
         $val = (Get-ItemProperty $regPath).($_.Name)
         if ($val) {
-             $data.artifacts += @{
-                id = [Guid]::NewGuid().ToString(); type = "SHELLBAG";
-                timestamp = (Get-Date).ToString("o");
-                name = "Typed Path"; path = $val;
-                action = "Explorer Navigation"; riskLevel = "MEDIUM"
-            }
+             Add-Artifact "SHELLBAG" "Typed Path" $val "Explorer Navigation" "MEDIUM"
         }
     }
 }
 
-# 3. USB History
-Write-Host "[-] Scanning USB..."
-Get-PnpDevice -Class 'USB' -Status OK | Where-Object { $_.FriendlyName -notmatch 'Hub|Controller' } | ForEach-Object {
-    $data.artifacts += @{
-        id = [Guid]::NewGuid().ToString(); type = "USB_DEVICE";
-        timestamp = (Get-Date).ToString("o");
-        name = $_.FriendlyName; path = $_.InstanceId;
-        action = "Connected"; riskLevel = "LOW"
-    }
+# 3. USB History (With Last Connection Date)
+Write-Host "[-] Scanning USB History..."
+# Get ALL devices (history), filter common non-storage
+$devices = Get-PnpDevice -Class 'USB' | Where-Object { $_.FriendlyName -notmatch 'Hub|Controller|Composite|Root|Intel|AMD' }
+foreach ($dev in $devices) {
+    $risk = "UNKNOWN"
+    if ($dev.FriendlyName -match "SanDisk|Samsung|Kingston|Seagate|WD") { $risk = "MEDIUM" }
+
+    # Attempt to get Last Arrival Date (Property Key: DEVPKEY_Device_LastArrivalDate)
+    $lastDateStr = "Unknown Date"
+    $lastDateIso = (Get-Date).ToString("o")
+    
+    try {
+        $prop = Get-PnpDeviceProperty -InstanceId $dev.InstanceId -KeyName "DEVPKEY_Device_LastArrivalDate" -ErrorAction SilentlyContinue
+        if ($prop.Data) {
+             $dt = [DateTime]$prop.Data
+             $lastDateStr = $dt.ToString("yyyy-MM-dd HH:mm:ss")
+             $lastDateIso = $dt.ToString("o")
+        }
+    } catch {}
+
+    Add-Artifact "USB_DEVICE" "$($dev.FriendlyName)" "$($dev.InstanceId)" "Last Connected: $lastDateStr" $risk $lastDateIso
 }
 
 # 4. Folder Access
@@ -555,12 +572,7 @@ foreach ($r in $roots) {
     $p = "$env:USERPROFILE\\$r"
     if (Test-Path $p) {
         Get-ChildItem $p -Directory | Where-Object { $_.LastAccessTime -gt (Get-Date).AddDays(-7) } | ForEach-Object {
-             $data.artifacts += @{
-                id = [Guid]::NewGuid().ToString(); type = "SHELLBAG";
-                timestamp = $_.LastAccessTime.ToString("o");
-                name = $_.Name; path = $_.FullName;
-                action = "Folder Accessed"; riskLevel = "LOW"
-            }
+             Add-Artifact "SHELLBAG" $_.Name $_.FullName "Folder Accessed" "LOW" $_.LastAccessTime.ToString("o")
         }
     }
 }
