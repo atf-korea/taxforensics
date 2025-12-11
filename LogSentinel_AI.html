@@ -21,9 +21,9 @@
   </style>
 
   <!-- UMD Libraries (No Build/Import Required) -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script type="importmap">
 {
   "imports": {
@@ -190,16 +190,17 @@
                     <div className="flex items-center gap-2 text-xs">
                         <Icons.Clock className="w-4 h-4 text-cyan-500 shrink-0"/>
                         <span className="text-cyan-400 font-mono font-bold">
-                           최종열람: {item.timestamp ? new Date(item.timestamp).toLocaleString() : '-'}
+                           <span className="text-slate-500 mr-2 font-sans font-normal">최종열람:</span>
+                           {item.timestamp ? new Date(item.timestamp).toLocaleString() : '-'}
                         </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                         <Icons.ActivityIcon className="w-4 h-4 text-slate-500 shrink-0"/>
-                        <span className="text-slate-300">행위: {item.action || '알 수 없음'}</span>
+                        <span className="text-slate-300"><span className="text-slate-500 mr-2">행위:</span> {item.action || '알 수 없음'}</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs">
                         <Icons.MapPin className="w-4 h-4 text-slate-500 shrink-0 mt-0.5"/>
-                        <span className="text-slate-400 break-all leading-tight">{item.path}</span>
+                        <span className="text-slate-400 break-all leading-tight"><span className="text-slate-500 mr-2">경로:</span> {item.path}</span>
                     </div>
                  </div>
               </div>
@@ -468,57 +469,326 @@ function Add-Artifact {
     }
 }
 
-# 1. RECENT DOCS (LNK Analysis)
+# ============================================
+# Known Folder GUID → 실제 경로 매핑
+# ============================================
+$KnownFolders = @{
+    "{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" = [Environment]::GetFolderPath('Desktop')
+    "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}" = [Environment]::GetFolderPath('MyDocuments')
+    "{374DE290-123F-4565-9164-39C4925E467B}" = "\$env:USERPROFILE\\Downloads"
+    "{33E28130-4E1E-4676-835A-98395C3BC3BB}" = [Environment]::GetFolderPath('MyPictures')
+    "{18989B1D-99B5-455B-841C-AB7C74E4DDFC}" = [Environment]::GetFolderPath('MyVideos')
+    "{4BD8D571-6D19-48D3-BE97-422220080E43}" = [Environment]::GetFolderPath('MyMusic')
+    "{1777F761-68AD-4D8A-87BD-30B759FA33DD}" = [Environment]::GetFolderPath('Favorites')
+    "{BFB9D5E0-C6A9-404C-B2B2-AE6DB6AF4968}" = "\$env:USERPROFILE\\Links"
+    "{56784854-C6CB-462B-8169-88E350ACB882}" = "\$env:USERPROFILE\\Contacts"
+    "{A520A1A4-1780-4FF6-BD18-167343C5AF16}" = "\$env:USERPROFILE\\AppData\\LocalLow"
+    "{625B53C3-AB48-4EC1-BA1F-A1EF4146FC19}" = "\$env:APPDATA\\Microsoft\\Windows\\Start Menu"
+    "{AE50C081-EBD2-438A-8655-8A092E34987A}" = "\$env:APPDATA\\Microsoft\\Windows\\Recent"
+    "{3D644C9B-1FB8-4F30-9B45-F670235F79C0}" = "\$env:PUBLIC\\Downloads"
+    "{DFDF76A2-C82A-4D63-906A-5644AC457385}" = "\$env:PUBLIC"
+    "{0762D272-C50A-4BB0-A382-697DCD729B80}" = "\$env:USERPROFILE"
+    "{5E6C858F-0E22-4760-9AFE-EA3317B67173}" = "\$env:USERPROFILE"
+    "{F38BF404-1D43-42F2-9305-67DE0B28FC23}" = "\$env:SystemRoot"
+    "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}" = "\$env:SystemRoot\\System32"
+    "{D65231B0-B2F1-4857-A4CE-A8E7C6EA7D27}" = "\$env:SystemRoot\\System32"
+    "{905E63B6-C1BF-494E-B29C-65B732D3D21A}" = "\$env:ProgramFiles"
+    "{6D809377-6AF0-444B-8957-A3773F02200E}" = "\${env:ProgramFiles(x86)}"
+    "{DE61D971-5EBC-4F02-A3A9-6C82895E5C04}" = "\$env:USERPROFILE\\OneDrive"
+    "{20D04FE0-3AEA-1069-A2D8-08002B30309D}" = "This PC"
+    "{5399E694-6CE5-4D6C-8FCE-1D8870FDCBA0}" = "\$env:USERPROFILE"
+}
+
+# ============================================
+# Shellbag 바이너리 파싱 함수
+# ============================================
+function Parse-ShellItem {
+    param([byte[]]$bytes)
+    
+    if (-not $bytes -or $bytes.Length -lt 4) { return $null }
+    
+    $result = @{
+        FolderName = $null
+        FullPath = $null
+        FolderType = "Unknown"
+    }
+    
+    try {
+        $size = [BitConverter]::ToUInt16($bytes, 0)
+        if ($size -lt 3) { return $null }
+        
+        $type = $bytes[2]
+        
+        # 드라이브 (0x2F, 0x23, 0x25, 0x29)
+        if ($type -in @(0x2F, 0x23, 0x25, 0x29, 0x2E)) {
+            $result.FolderType = "Drive"
+            if ($bytes.Length -gt 3) {
+                $driveLetter = [char]$bytes[3]
+                if ($driveLetter -match '[A-Za-z]') {
+                    $result.FolderName = "\${driveLetter}:"
+                    $result.FullPath = "\${driveLetter}:\\"
+                }
+            }
+        }
+        # GUID 기반 폴더 (0x1F)
+        elseif ($type -eq 0x1F -and $bytes.Length -ge 18) {
+            $result.FolderType = "Special Folder"
+            try {
+                $guidBytes = $bytes[4..19]
+                $guid = [Guid]::new($guidBytes)
+                $guidStr = "{$($guid.ToString().ToUpper())}"
+                
+                if ($KnownFolders.ContainsKey($guidStr)) {
+                    $result.FullPath = $KnownFolders[$guidStr]
+                    $result.FolderName = Split-Path $result.FullPath -Leaf
+                    if (-not $result.FolderName) { $result.FolderName = $result.FullPath }
+                } else {
+                    $result.FolderName = "GUID: $guidStr"
+                    $result.FullPath = $guidStr
+                }
+            } catch {
+                $result.FolderName = "Special Folder"
+            }
+        }
+        # 일반 폴더 - 유니코드 (0x32, 0x36, 0x3A)
+        elseif ($type -in @(0x32, 0x36, 0x3A, 0x34, 0x35, 0x31, 0x30, 0x74, 0x76)) {
+            $result.FolderType = if ($type -in @(0x74, 0x76)) { "File" } else { "Folder" }
+            $unicodeName = ""
+            $startOffset = -1
+            for ($i = 4; $i -lt $bytes.Length - 10; $i++) {
+                if ($bytes[$i] -ge 0x04 -and $bytes[$i] -le 0x09 -and $bytes[$i+1] -eq 0x00) {
+                    $testStart = $i + 2
+                    if ($testStart -lt $bytes.Length - 4) {
+                        $extSize = [BitConverter]::ToUInt16($bytes, $i)
+                        if ($extSize -gt 0 -and $extSize -lt 200) {
+                            $startOffset = $i
+                            break
+                        }
+                    }
+                }
+            }
+            for ($i = [Math]::Min($bytes.Length - 2, 200); $i -gt 10; $i -= 2) {
+                if ($bytes[$i] -eq 0 -and $bytes[$i+1] -eq 0) {
+                    $strEnd = $i
+                    $strStart = $i
+                    for ($j = $i - 2; $j -gt 4; $j -= 2) {
+                        $char = [BitConverter]::ToUInt16($bytes, $j)
+                        if ($char -ge 32 -and $char -lt 65535 -and $char -ne 0xFFFF) {
+                            $strStart = $j
+                        } else {
+                            break
+                        }
+                    }
+                    if ($strEnd - $strStart -ge 4) {
+                        try {
+                            $unicodeName = [System.Text.Encoding]::Unicode.GetString($bytes[$strStart..$strEnd])
+                            $unicodeName = $unicodeName.Trim([char]0)
+                            if ($unicodeName.Length -gt 1 -and $unicodeName -notmatch '[\\x00-\\x1F]') {
+                                $result.FolderName = $unicodeName
+                                break
+                            }
+                        } catch {}
+                    }
+                }
+            }
+            if (-not $result.FolderName) {
+                $asciiName = ""
+                $inString = $false
+                for ($i = 3; $i -lt [Math]::Min($bytes.Length, 50); $i++) {
+                    $b = $bytes[$i]
+                    if ($b -ge 32 -and $b -lt 127) {
+                        $asciiName += [char]$b
+                        $inString = $true
+                    } elseif ($inString -and $b -eq 0 -and $asciiName.Length -gt 1) {
+                        break
+                    } elseif ($b -eq 0 -and $asciiName.Length -gt 0) {
+                    } else {
+                        $asciiName = ""
+                        $inString = $false
+                    }
+                }
+                if ($asciiName.Length -gt 1) {
+                    $result.FolderName = $asciiName.Trim()
+                }
+            }
+        }
+        # 네트워크 (0xC3, 0x41, 0x42, 0x46, 0x47)
+        elseif ($type -in @(0xC3, 0x41, 0x42, 0x46, 0x47)) {
+            $result.FolderType = "Network"
+            $netPath = ""
+            for ($i = 3; $i -lt $bytes.Length; $i++) {
+                $b = $bytes[$i]
+                if ($b -ge 32 -and $b -lt 127) {
+                    $netPath += [char]$b
+                } elseif ($b -eq 0 -and $netPath.Length -gt 2) {
+                    break
+                }
+            }
+            if ($netPath) {
+                $result.FolderName = $netPath
+                $result.FullPath = $netPath
+            }
+        }
+    } catch {}
+    if ($result.FolderName) {
+        $result.FolderName = $result.FolderName -replace '[\\x00-\\x1F]', ''
+        $result.FolderName = $result.FolderName.Trim()
+    }
+    return $result
+}
+
+# ============================================
+# BagMRU 재귀 파싱
+# ============================================
+function Parse-BagMRU {
+    param(
+        [string]$regPath, 
+        [string]$parentFullPath = "", 
+        [int]$depth = 0
+    )
+    if ($depth -gt 15 -or -not (Test-Path $regPath)) { return }
+    try {
+        $props = Get-ItemProperty -Path $regPath -ErrorAction SilentlyContinue
+        $key = Get-Item -Path $regPath -ErrorAction SilentlyContinue
+        $key.Property | Where-Object { $_ -match '^\d+$' } | Sort-Object { [int]$_ } | ForEach-Object {
+            $valueName = $_
+            $bytes = $props.$valueName
+            if ($bytes -and $bytes -is [byte[]]) {
+                $parsed = Parse-ShellItem -bytes $bytes
+                if ($parsed -and $parsed.FolderName) {
+                    if ($parsed.FullPath) {
+                        $fullPath = $parsed.FullPath
+                    } elseif ($parentFullPath) {
+                        $fullPath = Join-Path $parentFullPath $parsed.FolderName
+                    } else {
+                        $fullPath = $parsed.FolderName
+                    }
+                    $fullPath = $fullPath -replace '\\\\\\\\', '\\\\'
+                    $ts = (Get-Date).ToString("o")
+                    try {
+                        $subKeyPath = "$regPath\\$valueName"
+                        if (Test-Path $subKeyPath) {
+                            $subKey = Get-Item $subKeyPath -ErrorAction SilentlyContinue
+                            if ($subKey.LastWriteTime) {
+                                $ts = $subKey.LastWriteTime.ToString("o")
+                            }
+                        }
+                    } catch {}
+                    Add-Artifact "SHELLBAG" $parsed.FolderName $fullPath "Type: $($parsed.FolderType)" "MEDIUM" $ts
+                    $subKeyPath = "$regPath\\$valueName"
+                    if (Test-Path $subKeyPath) {
+                        $nextParent = if ($parsed.FullPath) { $parsed.FullPath } else { $fullPath }
+                        Parse-BagMRU -regPath $subKeyPath -parentFullPath $nextParent -depth ($depth + 1)
+                    }
+                }
+            }
+        }
+    } catch {}
+}
+
+# ============================================
+# 1. RECENT DOCS
+# ============================================
 Write-Host "[-] Scanning Recent Docs..." -NoNewline
 try {
     $wsh = New-Object -ComObject WScript.Shell
-    Get-ChildItem "$env:APPDATA\\Microsoft\\Windows\\Recent" -Filter "*.lnk" | Select-Object -First 50 | ForEach-Object {
-        try {
-            $sc = $wsh.CreateShortcut($_.FullName)
-            if ($sc.TargetPath) { Add-Artifact "RECENT_DOC" $_.Name.Replace(".lnk","") $sc.TargetPath "LNK Target Resolved" "MEDIUM" $_.LastAccessTime.ToString("o") }
-        } catch {}
+    $recentPath = [Environment]::GetFolderPath('Recent')
+    Get-ChildItem $recentPath -Filter "*.lnk" -ErrorAction SilentlyContinue | 
+        Sort-Object LastWriteTime -Descending | 
+        Select-Object -First 50 | 
+        ForEach-Object {
+            try {
+                $sc = $wsh.CreateShortcut($_.FullName)
+                if ($sc.TargetPath) { 
+                    Add-Artifact "RECENT_DOC" $_.BaseName $sc.TargetPath "LNK Target" "MEDIUM" $_.LastWriteTime.ToString("o") 
+                }
+            } catch {}
+        }
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($wsh) | Out-Null
+    Write-Host " Done." -ForegroundColor Green
+} catch { Write-Host " Error." -ForegroundColor Red }
+
+# ============================================
+# 2. SHELLBAG 수집
+# ============================================
+Write-Host "[-] Scanning Shellbags..." -NoNewline
+try {
+    $shellbagPaths = @(
+        "HKCU:\\Software\\Microsoft\\Windows\\Shell\\BagMRU",
+        "HKCU:\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\BagMRU"
+    )
+    foreach ($path in $shellbagPaths) {
+        if (Test-Path $path) {
+            Parse-BagMRU -regPath $path -parentFullPath "" -depth 0
+        }
+    }
+    Write-Host " Done." -ForegroundColor Green
+} catch { Write-Host " Error: $_" -ForegroundColor Red }
+
+# ============================================
+# 3. EXPLORER HISTORY
+# ============================================
+Write-Host "[-] Scanning Explorer History..." -NoNewline
+try {
+    $typedPathsReg = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\TypedPaths"
+    if (Test-Path $typedPathsReg) {
+        $props = Get-ItemProperty $typedPathsReg
+        $props.PSObject.Properties | Where-Object { $_.Name -match "^url\d+" } | ForEach-Object {
+            if ($_.Value) { 
+                $folderName = Split-Path $_.Value -Leaf
+                if (-not $folderName) { $folderName = $_.Value }
+                Add-Artifact "SHELLBAG" $folderName $_.Value "Address Bar (TypedPath)" "MEDIUM" (Get-Date).ToString("o")
+            }
+        }
+    }
+    $runMRUReg = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
+    if (Test-Path $runMRUReg) {
+        $props = Get-ItemProperty $runMRUReg
+        $props.PSObject.Properties | Where-Object { $_.Name -match "^[a-z]$" } | ForEach-Object {
+            if ($_.Value) { 
+                $cmd = $_.Value -replace "\\\\1$", ""
+                Add-Artifact "EXPLORER_HISTORY" $cmd $cmd "Run Command" "HIGH" (Get-Date).ToString("o")
+            }
+        }
     }
     Write-Host " Done." -ForegroundColor Green
 } catch { Write-Host " Error." -ForegroundColor Red }
 
-# 2. SHELLBAGS / FOLDER ACCESS
-Write-Host "[-] Scanning Shellbags & Registry..." -NoNewline
-# TypedPaths
-$reg = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\TypedPaths"
-if (Test-Path $reg) {
-    Get-ItemProperty $reg | Get-Member -MemberType NoteProperty | Where-Object { $_.Name -match "^url" } | ForEach-Object {
-        $val = (Get-ItemProperty $reg).($_.Name)
-        if ($val) { Add-Artifact "SHELLBAG" "Typed Path" $val "Explorer History" "MEDIUM" (Get-Date).ToString("o") }
-    }
-}
-# Folder Access
-@("Desktop", "Downloads", "Documents") | ForEach-Object {
-    $p = "$env:USERPROFILE\\$_"
-    if (Test-Path $p) {
-        Get-ChildItem $p -Directory | Where-Object { $_.LastAccessTime -gt (Get-Date).AddDays(-30) } | ForEach-Object {
-             Add-Artifact "SHELLBAG" $_.Name $_.FullName "Folder Accessed" "LOW" $_.LastAccessTime.ToString("o")
-        }
-    }
-}
-Write-Host " Done." -ForegroundColor Green
-
-# 3. USB HISTORY
+# ============================================
+# 4. USB HISTORY
+# ============================================
 Write-Host "[-] Scanning USB History..." -NoNewline
-$devs = Get-PnpDevice -Class 'USB' | Where-Object { $_.FriendlyName -notmatch 'Hub|Controller|Composite|Root|Intel|AMD' }
-foreach ($d in $devs) {
-    $lastDate = (Get-Date).ToString("o")
-    try {
-       $p = Get-PnpDeviceProperty -InstanceId $d.InstanceId -KeyName "{83da6326-97a6-4088-9453-a1923f573b29} 102" -ErrorAction SilentlyContinue
-       if ($p.Data) { $dt = [DateTime]$p.Data; $lastDate = $dt.ToString("o") }
-    } catch {}
-    Add-Artifact "USB_DEVICE" $d.FriendlyName $d.InstanceId "Device Detected" "HIGH" $lastDate
-}
-Write-Host " Done." -ForegroundColor Green
+try {
+    $devs = Get-PnpDevice -Class 'USB' -ErrorAction SilentlyContinue | 
+            Where-Object { $_.FriendlyName -and $_.FriendlyName -notmatch 'Hub|Controller|Composite|Root|Intel|AMD|Host|Virtual' }
+    foreach ($d in $devs) {
+        $lastDate = "Unknown"
+        $ts = (Get-Date).ToString("o")
+        try {
+            $p = Get-PnpDeviceProperty -InstanceId $d.InstanceId -KeyName "{83da6326-97a6-4088-9453-a1923f573b29} 102" -ErrorAction SilentlyContinue
+            if ($p.Data) { 
+                $dt = [DateTime]$p.Data
+                $lastDate = $dt.ToString("yyyy-MM-dd HH:mm:ss")
+                $ts = $dt.ToString("o") 
+            }
+        } catch {}
+        Add-Artifact "USB_DEVICE" $d.FriendlyName $d.InstanceId "Last: $lastDate" "HIGH" $ts
+    }
+    Write-Host " Done." -ForegroundColor Green
+} catch { Write-Host " Error." -ForegroundColor Red }
 
+# ============================================
+# 결과 저장
+# ============================================
 $out = "$PWD\\forensics_data.json"
-$data | ConvertTo-Json -Depth 5 -Compress | Out-File $out -Encoding utf8
-Write-Host "[+] Saved to $out" -ForegroundColor Green
-Start-Sleep -Seconds 3
+$data | ConvertTo-Json -Depth 5 | Out-File $out -Encoding utf8
+
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host "[+] Total Artifacts: $($data.artifacts.Count)" -ForegroundColor Green
+Write-Host "[+] Saved to: $out" -ForegroundColor Green
+Write-Host "============================================" -ForegroundColor Cyan
+Start-Sleep -Seconds 5
 `;
         const blob = new Blob([script], { type: 'text/plain' });
         const a = document.createElement('a');
