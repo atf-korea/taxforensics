@@ -23,7 +23,6 @@
   <!-- UMD Libraries (No Build/Import Required) -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/recharts@2.12.0/umd/Recharts.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="importmap">
 {
@@ -32,7 +31,6 @@
     "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
     "react/": "https://esm.sh/react@^19.2.1/",
     "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
     "recharts": "https://esm.sh/recharts@^3.5.1"
   }
 }
@@ -50,19 +48,11 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
     
-    // Ensure Recharts is loaded safe-guard
-    const Recharts = window.Recharts || {};
-    const { 
-      BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, 
-      XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
-    } = Recharts;
-
     /* ---------------------------------------------------------------------------
      *  ICONS (Inline SVG for reliability)
      * --------------------------------------------------------------------------- */
     const Icons = {
       Activity: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
-      LayoutDashboard: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>,
       ShieldAlert: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
       BrainCircuit: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>,
       FileText: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
@@ -82,10 +72,8 @@
       User: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
       ExternalLink: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
       CheckCircle: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-      Clock: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
       AlertTriangle: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-      Menu: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
-      Coffee: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      Menu: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     };
 
     /* ---------------------------------------------------------------------------
@@ -122,128 +110,6 @@
      *  COMPONENTS
      * --------------------------------------------------------------------------- */
     
-    // 1. Dashboard
-    const Dashboard = ({ logs }) => {
-      const stats = useMemo(() => {
-        if (!logs || logs.length === 0) return null;
-
-        const total = logs.reduce((acc, l) => acc + (l.durationSeconds || 0), 0);
-        const appMap = {};
-        const catMap = {};
-        const dateMap = {};
-
-        logs.forEach(l => { 
-          appMap[l.application] = (appMap[l.application] || 0) + l.durationSeconds;
-          catMap[l.category] = (catMap[l.category] || 0) + l.durationSeconds;
-          const date = l.timestamp.split('T')[0];
-          dateMap[date] = (dateMap[date] || 0) + l.durationSeconds;
-        });
-
-        const topApps = Object.entries(appMap)
-          .map(([name, dur]) => ({ name, duration: Math.round(dur/60) }))
-          .sort((a, b) => b.duration - a.duration)
-          .slice(0, 5);
-
-        const categoryData = Object.entries(catMap)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value);
-
-        const activityData = Object.entries(dateMap)
-          .map(([date, seconds]) => ({ date, hours: parseFloat((seconds / 3600).toFixed(1)) }))
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        
-        // Simple productivity logic
-        const prodSeconds = (catMap['Productivity'] || 0) + (catMap['Development'] || 0);
-        const productivityScore = total > 0 ? Math.min(100, Math.round((prodSeconds / total) * 100)) : 0;
-        const uniqueApps = Object.keys(appMap).length;
-
-        return { totalHours: (total/3600).toFixed(1), topApps, categoryData, activityData, productivityScore, uniqueApps };
-      }, [logs]);
-
-      if (!BarChart) return <div className="text-red-400 p-8 text-center bg-slate-900 border border-slate-800 rounded-xl">차트 라이브러리 로딩 실패. 새로고침 해주세요.</div>;
-      if (!stats) return <div className="text-slate-500 p-8 text-center bg-slate-900 border border-slate-800 rounded-xl">데이터가 없습니다. 로그 파일을 업로드해주세요.</div>;
-
-      const COLORS = ['#22d3ee', '#818cf8', '#34d399', '#f472b6', '#fbbf24', '#94a3b8'];
-
-      return (
-        <div className="space-y-6 animate-fade-in pb-20 md:pb-0">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden">
-              <Icons.Clock className="absolute right-4 top-4 w-12 h-12 text-slate-800" />
-              <h3 className="text-slate-400 text-sm font-medium">총 사용 시간</h3>
-              <p className="text-3xl font-bold text-white mt-2">{stats.totalHours} <span className="text-lg text-slate-500">시간</span></p>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden">
-              <Icons.CheckCircle className="absolute right-4 top-4 w-12 h-12 text-green-900/40" />
-              <h3 className="text-slate-400 text-sm font-medium">생산성 점수</h3>
-              <p className="text-3xl font-bold text-green-400 mt-2">{stats.productivityScore}<span className="text-lg text-slate-500">%</span></p>
-              <div className="w-full bg-slate-800 h-1 mt-3 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${stats.productivityScore}%`}}></div>
-              </div>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden">
-              <Icons.Coffee className="absolute right-4 top-4 w-12 h-12 text-yellow-900/40" />
-              <h3 className="text-slate-400 text-sm font-medium">최다 사용 앱</h3>
-              <p className="text-2xl font-bold text-white mt-2 truncate" title={stats.topApps[0]?.name}>{stats.topApps[0]?.name || '-'}</p>
-              <p className="text-xs text-slate-500 mt-1">{stats.topApps[0] ? `${Math.floor(stats.topApps[0].duration/60)}시간 ${stats.topApps[0].duration%60}분` : ''}</p>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl relative overflow-hidden">
-              <Icons.AlertTriangle className="absolute right-4 top-4 w-12 h-12 text-pink-900/40" />
-              <h3 className="text-slate-400 text-sm font-medium">실행된 앱 수</h3>
-              <p className="text-3xl font-bold text-white mt-2">{stats.uniqueApps}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-xl h-80">
-              <h3 className="text-white mb-4 font-semibold">일별 활동 추이 (시간)</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.activityData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
-                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickFormatter={(v)=>v.substring(5)} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip contentStyle={{backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff'}} />
-                  <Line type="monotone" dataKey="hours" stroke="#22d3ee" strokeWidth={3} dot={{r:4, fill:'#0f172a'}} activeDot={{r:6}} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl h-80">
-              <h3 className="text-white mb-4 font-semibold">카테고리별 분포</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={stats.categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                    {stats.categoryData.map((e, i) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} stroke="rgba(0,0,0,0)" />)}
-                  </Pie>
-                  <Tooltip formatter={(v) => `${(v/3600).toFixed(1)}시간`} contentStyle={{backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff'}} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap gap-2 justify-center mt-2">
-                {stats.categoryData.slice(0,3).map((e, i) => (
-                  <div key={i} className="flex items-center gap-1 text-xs text-slate-400">
-                    <span className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i%COLORS.length]}}></span>{e.name}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl h-80">
-            <h3 className="text-white mb-4 font-semibold">상위 사용 애플리케이션 (분)</h3>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.topApps} layout="vertical" margin={{top:5, right:30, left:40, bottom:5}}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false}/>
-                <XAxis type="number" stroke="#94a3b8" />
-                <YAxis dataKey="name" type="category" stroke="#94a3b8" width={100} tick={{fontSize: 11}} />
-                <Tooltip contentStyle={{backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff'}} />
-                <Bar dataKey="duration" fill="#818cf8" radius={[0,4,4,0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      );
-    };
-
     // 2. Forensics View
     const ForensicsView = ({ artifacts }) => {
       const [filter, setFilter] = useState('ALL');
@@ -497,13 +363,13 @@
              setLogs(targetLogs);
              setArtifacts(targetArtifacts);
              setScanning(false);
-             setView('FORENSICS'); // Go straight to Forensics for analyzed files
+             setView('FORENSICS'); // Dashboard removed, go to FORENSICS
            }
         ];
         let current = 0;
         const interval = setInterval(() => {
           if (current < steps.length) { steps[current](); current++; } else { clearInterval(interval); }
-        }, 1000); // 1 second per step
+        }, 1000); 
       };
 
       const handleDownloadScript = () => {
@@ -632,7 +498,7 @@ Start-Sleep -Seconds 3
               <NavBtn id="UPLOAD" label="파일 업로드" icon={<Icons.UploadCloud className="w-5 h-5"/>}/>
               {(logs.length > 0 || artifacts.length > 0) && <>
                 <NavBtn id="FORENSICS" label="포렌식 결과" icon={<Icons.ShieldAlert className="w-5 h-5"/>}/>
-                <NavBtn id="DASHBOARD" label="대시보드" icon={<Icons.LayoutDashboard className="w-5 h-5"/>}/>
+                {/* DASHBOARD REMOVED */}
                 <NavBtn id="ANALYSIS" label="AI 챗봇" icon={<Icons.BrainCircuit className="w-5 h-5"/>}/>
               </>}
             </nav>
@@ -645,7 +511,6 @@ Start-Sleep -Seconds 3
 
           <main className="flex-1 overflow-auto bg-slate-950 p-4 md:p-8 relative w-full">
             {view === 'UPLOAD' && <FileUpload onStartAnalysis={startScanSequence} onDownloadScript={handleDownloadScript}/>}
-            {view === 'DASHBOARD' && <Dashboard logs={logs}/>}
             {view === 'FORENSICS' && <ForensicsView artifacts={artifacts}/>}
             {view === 'ANALYSIS' && <AIAnalysis logs={logs} artifacts={artifacts}/>}
           </main>
@@ -655,7 +520,7 @@ Start-Sleep -Seconds 3
 
     // Safe Loading Wrapper
     const waitForGlobals = () => {
-      if (window.React && window.ReactDOM && window.Recharts) {
+      if (window.React && window.ReactDOM) {
          const root = ReactDOM.createRoot(document.getElementById('root'));
          root.render(<App />);
       } else {
