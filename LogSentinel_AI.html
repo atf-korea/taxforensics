@@ -24,12 +24,10 @@
 
   <style>
     body { font-family: 'Pretendard', sans-serif; background-color: #020617; color: #e2e8f0; }
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    
     .animate-fade-in { animation: fadeIn 0.5s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   </style>
@@ -57,16 +55,18 @@
     </div>
   </div>
 
-  <!-- Main Application Script -->
   <script type="text/babel">
-    // Wait for libraries to load
+    /**
+     * Safety Check: Wait for libraries to load before executing React code.
+     * This prevents "Recharts is not defined" errors.
+     */
     const waitForGlobals = () => {
       return new Promise((resolve) => {
         const check = () => {
           if (window.React && window.ReactDOM && window.Recharts) {
             resolve();
           } else {
-            setTimeout(check, 50);
+            setTimeout(check, 100);
           }
         };
         check();
@@ -77,14 +77,14 @@
       await waitForGlobals();
 
       const { useState, useEffect, useMemo, useRef } = React;
-      // Access Recharts from window safely
+      // Access Recharts safely from window
       const { 
         BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, 
         XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
       } = window.Recharts;
 
       /* =================================================================================
-         1. ICONS (Inline SVG Components to remove dependencies)
+         1. ICONS (Inline SVG to avoid external dependency failures)
          ================================================================================= */
       const Icons = {
         Activity: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
@@ -110,17 +110,16 @@
         Sparkles: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/></svg>,
         Send: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
         Bot: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
-        User: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-        Search: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        User: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       };
 
       /* =================================================================================
-         2. MOCK DATA SERVICES
+         2. DATA LOGIC
          ================================================================================= */
       const generateMockData = () => {
         const apps = [
           { name: 'VS Code', category: 'Development' },
-          { name: 'Google Chrome', category: 'Uncategorized' },
+          { name: 'Chrome', category: 'Uncategorized' },
           { name: 'Slack', category: 'Communication' },
           { name: 'Spotify', category: 'Entertainment' },
           { name: 'Excel', category: 'Productivity' }
@@ -149,40 +148,9 @@
       ];
 
       /* =================================================================================
-         3. AI SERVICE (Native Fetch)
-         ================================================================================= */
-      const analyzeLogsWithGemini = async (logs, artifacts, userPrompt, apiKey) => {
-        if (!apiKey) throw new Error("API Key가 필요합니다.");
-        const summary = `Logs: ${logs.length} entries. Top App: ${logs[0]?.application}. Artifacts: ${artifacts.length} items.`;
-        const payload = {
-          contents: [{
-            parts: [{
-              text: `System: 당신은 디지털 포렌식 전문가입니다. 한국어로 답변하세요.
-                     Data Context: ${summary}
-                     User Question: ${userPrompt}`
-            }]
-          }]
-        };
-
-        try {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const data = await response.json();
-          if (data.error) throw new Error(data.error.message);
-          return data.candidates?.[0]?.content?.parts?.[0]?.text || "분석 결과를 생성하지 못했습니다.";
-        } catch (e) {
-          throw new Error(`AI 요청 실패: ${e.message}`);
-        }
-      };
-
-      /* =================================================================================
-         4. COMPONENTS
+         3. COMPONENTS
          ================================================================================= */
       
-      // --- Dashboard Component ---
       const Dashboard = ({ logs }) => {
         const stats = useMemo(() => {
           const totalDuration = logs.reduce((acc, log) => acc + log.durationSeconds, 0);
@@ -209,9 +177,8 @@
                   <p className="text-3xl font-bold text-cyan-400 mt-2">{logs.length.toLocaleString()}</p>
                </div>
             </div>
-
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl h-96">
-              <h3 className="text-lg font-semibold text-white mb-4">상위 사용 애플리케이션 (분)</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">상위 애플리케이션 (분)</h3>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.topApps} layout="vertical" margin={{top: 5, right: 30, left: 40, bottom: 5}}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false}/>
@@ -226,11 +193,9 @@
         );
       };
 
-      // --- Forensics View Component ---
       const ForensicsView = ({ artifacts }) => {
         const [filter, setFilter] = useState('ALL');
         const filtered = artifacts.filter(a => filter === 'ALL' || a.type === filter);
-        
         return (
           <div className="space-y-6 animate-fade-in">
             <div className="flex gap-2">
@@ -240,7 +205,7 @@
                   onClick={() => setFilter(type)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === type ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                 >
-                  {type === 'ALL' ? '전체 보기' : type}
+                  {type === 'ALL' ? '전체' : type}
                 </button>
               ))}
             </div>
@@ -270,14 +235,13 @@
         );
       };
 
-      // --- AI Analysis Component ---
       const AIAnalysis = ({ logs, artifacts }) => {
         const [messages, setMessages] = useState([{ role: 'ai', content: 'PC 사용 기록과 포렌식 데이터 분석 준비가 되었습니다. 무엇을 도와드릴까요?' }]);
         const [input, setInput] = useState('');
         const [loading, setLoading] = useState(false);
         const [apiKey, setApiKey] = useState(() => localStorage.getItem('GEMINI_API_KEY') || '');
-        const [tempKey, setTempKey] = useState('');
         const [showKeyInput, setShowKeyInput] = useState(!apiKey);
+        const [tempKey, setTempKey] = useState('');
 
         const handleSaveKey = () => {
           if(tempKey.trim()) {
@@ -301,8 +265,25 @@
           setLoading(true);
 
           try {
-            const result = await analyzeLogsWithGemini(logs, artifacts, userMsg.content, apiKey);
-            setMessages(prev => [...prev, { role: 'ai', content: result }]);
+            const summary = `Logs: ${logs.length} entries. Top App: ${logs[0]?.application}. Artifacts: ${artifacts.length} items.`;
+            const payload = {
+              contents: [{
+                parts: [{
+                  text: `System: 당신은 디지털 포렌식 전문가입니다. 한국어로 답변하세요.
+                         Context: ${summary}
+                         User: ${userMsg.content}`
+                }]
+              }]
+            };
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "응답을 생성하지 못했습니다.";
+            setMessages(prev => [...prev, { role: 'ai', content: text }]);
           } catch (e) {
             setMessages(prev => [...prev, { role: 'ai', content: `오류 발생: ${e.message}` }]);
           } finally {
@@ -312,18 +293,17 @@
 
         return (
           <div className="flex flex-col h-[600px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden animate-fade-in">
-            <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Icons.Sparkles className="text-cyan-400 w-5 h-5"/>
-                <h3 className="font-semibold text-white">Gemini 포렌식 AI</h3>
+            <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+              <div className="flex items-center gap-2 text-white font-bold">
+                <Icons.Sparkles className="text-cyan-400 w-5 h-5"/> Gemini 포렌식 AI
               </div>
-              <button onClick={() => setShowKeyInput(!showKeyInput)} className="text-xs flex items-center gap-1 bg-slate-800 px-3 py-1 rounded border border-slate-700 text-slate-300 hover:text-white">
+              <button onClick={() => setShowKeyInput(!showKeyInput)} className="text-xs flex items-center gap-1 bg-slate-800 px-3 py-1 rounded text-slate-300 border border-slate-700">
                 <Icons.Key className="w-3 h-3"/> {apiKey ? '키 변경' : '키 설정'}
               </button>
             </div>
 
             {showKeyInput && (
-              <div className="p-4 bg-slate-800 border-b border-slate-700 flex gap-2 animate-fade-in">
+              <div className="p-4 bg-slate-800 border-b border-slate-700 flex gap-2">
                 <input 
                   type="password" 
                   placeholder="Google Gemini API Key 입력" 
@@ -331,7 +311,7 @@
                   onChange={e => setTempKey(e.target.value)}
                   className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none"
                 />
-                <button onClick={handleSaveKey} className="bg-cyan-600 text-white px-4 py-2 rounded text-sm hover:bg-cyan-500 flex items-center gap-1"><Icons.Save className="w-3 h-3"/>저장</button>
+                <button onClick={handleSaveKey} className="bg-cyan-600 text-white px-4 py-2 rounded text-sm flex items-center gap-1"><Icons.Save className="w-3 h-3"/>저장</button>
               </div>
             )}
 
@@ -352,12 +332,12 @@
             <div className="p-4 bg-slate-800/50 border-t border-slate-800 flex gap-2">
               <input 
                 className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                placeholder="USB 기록이나 특이사항에 대해 물어보세요..."
+                placeholder="질문을 입력하세요..."
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend()}
               />
-              <button onClick={handleSend} disabled={loading} className="bg-cyan-600 text-white p-2 rounded-lg hover:bg-cyan-500 disabled:opacity-50">
+              <button onClick={handleSend} disabled={loading} className="bg-cyan-600 text-white p-2 rounded-lg disabled:opacity-50">
                 <Icons.Send className="w-5 h-5"/>
               </button>
             </div>
@@ -365,7 +345,6 @@
         );
       };
 
-      // --- File Upload / Home Component ---
       const FileUpload = ({ onStartSim, onDownloadScript }) => {
         return (
           <div className="max-w-2xl mx-auto space-y-8 mt-20 animate-fade-in">
@@ -373,15 +352,13 @@
               <h1 className="text-4xl font-bold text-white">LogSentinel AI</h1>
               <p className="text-slate-400">PC 사용 기록 및 디지털 흔적(Artifact) 포렌식 분석기</p>
             </div>
-            
             <div className="bg-slate-900 border border-slate-800 p-8 rounded-xl space-y-6">
-              <div className="border-2 border-dashed border-slate-700 rounded-lg p-10 flex flex-col items-center text-slate-500 hover:border-cyan-500 hover:text-cyan-400 transition-colors cursor-pointer">
+              <div className="border-2 border-dashed border-slate-700 rounded-lg p-10 flex flex-col items-center text-slate-500">
                 <Icons.UploadCloud className="w-12 h-12 mb-4"/>
-                <p>로그 파일(.json) 드래그 앤 드롭</p>
+                <p>로그 파일(.json) 드래그 앤 드롭 (데모 전용)</p>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button onClick={onStartSim} className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-4 rounded-xl font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
+                <button onClick={onStartSim} className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-4 rounded-xl font-bold hover:opacity-90 flex items-center justify-center gap-2">
                   <Icons.ScanSearch className="w-5 h-5" /> 포렌식 시뮬레이션
                 </button>
                 <button onClick={onDownloadScript} className="bg-slate-800 text-slate-300 p-4 rounded-xl border border-slate-700 hover:bg-slate-700 flex items-center justify-center gap-2">
@@ -393,11 +370,8 @@
         );
       };
 
-      /* =================================================================================
-         5. MAIN APP COMPONENT
-         ================================================================================= */
       const App = () => {
-        const [view, setView] = useState('UPLOAD'); // UPLOAD, DASHBOARD, FORENSICS, ANALYSIS
+        const [view, setView] = useState('UPLOAD');
         const [logs, setLogs] = useState([]);
         const [artifacts, setArtifacts] = useState([]);
         const [scanning, setScanning] = useState(false);
@@ -409,11 +383,11 @@
             setArtifacts(generateForensicArtifacts());
             setScanning(false);
             setView('FORENSICS');
-          }, 2500);
+          }, 2000);
         };
 
         const handleDownloadScript = () => {
-          const text = `# PowerShell Script for Data Collection\nWrite-Host "Collecting Data..."\n# ... Logic ...\nWrite-Host "Done."`;
+          const text = `# PowerShell Collector Script\nWrite-Host "Collecting Forensic Data..."\n# (Logic would go here)\nWrite-Host "Done."`;
           const blob = new Blob([text], { type: 'text/plain' });
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
@@ -421,19 +395,15 @@
           a.click();
         };
 
-        if (scanning) {
-          return (
-            <div className="h-screen bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
-              <Icons.Loader2 className="w-12 h-12 text-cyan-400 animate-spin" />
-              <h2 className="text-xl font-bold">시스템 포렌식 스캔 중...</h2>
-              <p className="text-slate-400 text-sm">USB 히스토리, Shellbags, 최근 문서를 분석하고 있습니다.</p>
-            </div>
-          );
-        }
+        if (scanning) return (
+          <div className="h-screen bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
+            <Icons.Loader2 className="w-12 h-12 text-cyan-400 animate-spin" />
+            <h2 className="text-xl font-bold">시스템 포렌식 스캔 중...</h2>
+          </div>
+        );
 
         return (
           <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-            {/* Sidebar */}
             <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col z-10">
               <div className="p-6 border-b border-slate-800 flex items-center gap-2 text-cyan-400 font-bold text-xl">
                 <Icons.Activity className="w-6 h-6" /> LogSentinel
@@ -462,8 +432,6 @@
                  </button>
               </div>
             </aside>
-
-            {/* Main Content */}
             <main className="flex-1 overflow-auto bg-slate-950 p-8 relative">
               {view === 'UPLOAD' && <FileUpload onStartSim={handleSimulate} onDownloadScript={handleDownloadScript} />}
               {view === 'DASHBOARD' && <Dashboard logs={logs} />}
@@ -474,10 +442,10 @@
         );
       };
 
-      // --- Mount Application ---
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<App />);
     })();
   </script>
 </body>
 </html>
+    
