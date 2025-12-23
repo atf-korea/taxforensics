@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ForCASS (파일목록 작성)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client"
+      }
+    }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .input-field { 
+            background-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            border: 2px solid #94a3b8 !important;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            outline: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .input-field:focus {
+            background-color: #ffffff !important;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        .input-field::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        .scrollbar::-webkit-scrollbar { width: 6px; }
+        .scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module">
+        import React, { useState } from 'react';
+        import ReactDOM from 'react-dom/client';
+
+        const XIcon = ({ className }) => (
+            React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
+                React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" })
+            )
+        );
+
+        const App = () => {
+            const [sourcePaths, setSourcePaths] = useState([]);
+            const [currentPath, setCurrentPath] = useState('');
+            const [targetDir, setTargetDir] = useState('%USERPROFILE%\\Desktop');
+            const [id, setId] = useState('사용자');
+            const [exts] = useState(['7z','csv','db','doc','docx','eml','hwp','msg','pdf','ppt','pptx','pst','txt','xls','xlsx','zip']);
+            const [script, setScript] = useState('');
+            const [isModal, setIsModal] = useState(false);
+
+            const addPath = () => {
+                const p = currentPath.trim().replace(/\//g, '\\');
+                if (p && !sourcePaths.includes(p)) {
+                    setSourcePaths([...sourcePaths, p]);
+                    setCurrentPath('');
+                }
+            };
+
+            const generate = () => {
+                const fileName = `${id}_파일목록.csv`;
+                const fullOut = `${targetDir.replace(/\\$/, '')}\\${fileName}`;
+                const filterStr = exts.map(e => `*.${e}`).join(' ');
+
+                const psCommand = `
+$id = '${id}';
+$outFile = '${fullOut}';
+$sources = @(${sourcePaths.map(s => "'" + s.replace(/'/g, "''") + "'").join(',')});
+$filters = '${filterStr}'.Split(' ');
+$results = New-Object System.Collections.Generic.List[PSCustomObject];
+foreach ($src in $sources) {
+    if (Test-Path $src) {
+        Write-Host "[진행] 스캔 중: $src" -ForegroundColor Cyan;
+        $lines = robocopy $src "NULL" $filters /L /S /XJ /FP /NDL /NS /NC /NJH /NJS /R:0 /W:0;
+        foreach ($line in $lines) {
+            $path = $line.Trim();
+            if ($path -and (Test-Path $path)) {
+                $f = Get-Item $path -ErrorAction SilentlyContinue;
+                if ($f -is [System.IO.FileInfo]) {
+                    $results.Add([PSCustomObject]@{
+                        '사용자' = $id;
+                        '파일명' = $f.Name;
+                        '파일경로' = $f.FullName;
+                        '생성일자' = $f.CreationTime.ToString('yyyy-MM-dd HH:mm:ss');
+                        '수정일자' = $f.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss');
+                        '열람일자' = $f.LastAccessTime.ToString('yyyy-MM-dd HH:mm:ss');
+                        '용량(Bytes)' = $f.Length
+                    });
+                }
+            }
+        }
+    }
+}
+if ($results.Count -gt 0) {
+    $results | Export-Csv -Path $outFile -NoTypeInformation -Encoding UTF8;
+    Write-Host "[성공] 총 $($results.Count)개의 파일 목록을 작성했습니다." -ForegroundColor Green;
+} else {
+    Write-Host "[오류] 검색된 파일이 없습니다." -ForegroundColor Red;
+}
+                `.replace(/\n/g, ' ').trim();
+
+                let b = `@echo off\r\n`;
+                b += `title ForCASS (파일목록 작성) - ${id}\r\n`;
+                b += `chcp 65001 >nul\r\n`;
+                b += `cls\r\n`;
+                b += `echo.\r\n`;
+                b += `echo  ===========================================================\r\n`;
+                b += `echo    ForCASS (파일목록 작성) 유틸리티\r\n`;
+                b += `echo  ===========================================================\r\n`;
+                b += `echo.\r\n`;
+                b += `echo  파일 정보를 수집하고 있습니다. 잠시만 기다려 주세요...\r\n`;
+                b += `echo.\r\n`;
+                b += `powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCommand.replace(/"/g, '\"')}"\r\n`;
+                b += `echo.\r\n`;
+                b += `echo  작업 완료! 창을 닫으면 배치 파일이 자동으로 삭제됩니다.\r\n`;
+                b += `pause >nul\r\n`;
+                // 가장 확실한 자가 삭제 로직: 파일 속성 제거 후 메모리 점프 삭제
+                b += `attrib -r -a -s -h "%~f0" >nul 2>&1\r\n`;
+                b += `(goto) 2>nul & del "%~f0" & exit\r\n`;
+
+                setScript(b);
+                setIsModal(true);
+            };
+
+            const download = () => {
+                const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                const blob = new Blob([bom, script], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ForCASS_${id}.bat`;
+                a.click();
+            };
+
+            const isReady = sourcePaths.length > 0 && id.trim() !== '' && targetDir.trim() !== '';
+
+            return React.createElement("div", { className: "min-h-screen flex flex-col items-center justify-center p-6" },
+                React.createElement("div", { className: "w-full max-w-4xl space-y-6 fade-in" },
+                    React.createElement("header", { className: "text-center space-y-2 mb-4" },
+                        React.createElement("h1", { className: "text-5xl font-extrabold text-white tracking-tight" }, "ForCASS"),
+                        React.createElement("p", { className: "text-gray-400 font-medium text-lg" }, "파일 목록 자동 수집 도구")
+                    ),
+                    React.createElement("div", { className: "bg-gray-800 rounded-2xl p-8 border border-gray-700 shadow-2xl space-y-10" },
+                        React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-10" },
+                            React.createElement("div", { className: "space-y-6" },
+                                React.createElement("div", null,
+                                    React.createElement("label", { className: "block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wide" }, "1. 사용자 식별 정보"),
+                                    React.createElement("input", { className: "input-field", value: id, onChange: e => setId(e.target.value) })
+                                ),
+                                React.createElement("div", null,
+                                    React.createElement("label", { className: "block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wide" }, "2. 스캔 대상 폴더"),
+                                    React.createElement("div", { className: "flex gap-3" },
+                                        React.createElement("input", { 
+                                            className: "flex-grow input-field", 
+                                            placeholder: "폴더 경로 붙여넣기", 
+                                            value: currentPath, 
+                                            onChange: e => setCurrentPath(e.target.value), 
+                                            onKeyDown: e => { if(e.key === 'Enter') { e.preventDefault(); addPath(); } } 
+                                        }),
+                                        React.createElement("button", { 
+                                            onClick: addPath, 
+                                            className: "bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-lg transition-all text-white font-bold text-lg shadow-lg active:scale-95 whitespace-nowrap" 
+                                        }, "추가")
+                                    ),
+                                    React.createElement("div", { className: "mt-4 h-40 overflow-y-auto scrollbar bg-black/40 rounded-xl p-3 border border-gray-700 space-y-2 shadow-inner" },
+                                        sourcePaths.length > 0 ? sourcePaths.map((p, i) => React.createElement("div", { key: i, className: "flex justify-between items-center bg-gray-700/50 px-3 py-2.5 rounded-lg text-sm border border-white/5" },
+                                            React.createElement("span", { className: "truncate flex-1 text-gray-200 font-medium" }, p),
+                                            React.createElement("button", { onClick: () => setSourcePaths(sourcePaths.filter(x => x !== p)), className: "text-red-400 hover:text-red-300 ml-3 bg-red-400/10 p-1 rounded-md transition-colors" }, React.createElement(XIcon, { className: "w-5 h-5" }))
+                                        )) : React.createElement("div", { className: "text-center text-gray-600 mt-14 text-sm italic" }, "스캔할 경로를 추가해 주세요.")
+                                    )
+                                )
+                            ),
+                            React.createElement("div", { className: "space-y-6" },
+                                React.createElement("div", null,
+                                    React.createElement("label", { className: "block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wide" }, "3. CSV 저장 경로"),
+                                    React.createElement("input", { className: "input-field", value: targetDir, onChange: e => setTargetDir(e.target.value) })
+                                ),
+                                React.createElement("div", { className: "p-6 bg-blue-900/20 border border-blue-500/30 rounded-2xl space-y-4" },
+                                    React.createElement("h4", { className: "text-blue-400 text-xs font-bold uppercase tracking-widest" }, "수집 속성 프리뷰"),
+                                    React.createElement("div", { className: "grid grid-cols-1 gap-2.5 text-xs text-gray-300" },
+                                        ['파일명, 파일경로', '생성/수정/열람일자', '파일용량(Bytes)'].map(it => React.createElement("div", { key: it, className: "flex items-center gap-2.5" }, 
+                                            React.createElement("div", { className: "w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)]" }),
+                                            it
+                                        ))
+                                    )
+                                )
+                            )
+                        ),
+                        React.createElement("button", { 
+                            onClick: generate, 
+                            disabled: !isReady, 
+                            className: `w-full text-2xl font-black py-5 px-6 rounded-2xl transition-all shadow-2xl active:scale-[0.98] transform ${isReady ? 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer hover:-translate-y-1 shadow-blue-900/40' : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50'}` 
+                        }, "배치 파일(.BAT) 생성하기")
+                    )
+                ),
+                isModal && React.createElement("div", { className: "fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-50 backdrop-blur-sm", onClick: () => setIsModal(false) },
+                    React.createElement("div", { className: "bg-gray-800 rounded-3xl w-full max-w-3xl p-8 border border-gray-700 shadow-2xl space-y-6 fade-in", onClick: e => e.stopPropagation() },
+                        React.createElement("div", { className: "flex justify-between items-center border-b border-gray-700 pb-5" },
+                            React.createElement("h3", { className: "text-2xl font-bold text-white" }, "배치 파일 준비 완료"),
+                            React.createElement("button", { onClick: () => setIsModal(false), className: "text-gray-400 hover:text-white transition-colors" }, React.createElement(XIcon, { className: "w-8 h-8" }))
+                        ),
+                        React.createElement("div", { className: "p-4 bg-blue-600/10 border border-blue-500/20 rounded-xl text-sm text-blue-300 leading-relaxed" },
+                            "🚀 하단 버튼을 눌러 파일을 다운로드하세요. 파일을 실행하면 자동으로 수집을 시작하며, 수집 완료 후 창을 닫으면 이 배치 파일은 영구적으로 자동 삭제됩니다."
+                        ),
+                        React.createElement("textarea", { readOnly: true, className: "w-full h-48 bg-black/50 text-green-400 p-5 font-mono text-xs rounded-xl border border-gray-700 outline-none leading-relaxed scrollbar shadow-inner", value: script }),
+                        React.createElement("div", { className: "flex justify-end gap-4" },
+                            React.createElement("button", { onClick: download, className: "bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg active:scale-95 text-lg" }, "파일 다운로드"),
+                            React.createElement("button", { onClick: () => setIsModal(false), className: "bg-gray-700 hover:bg-gray-600 py-4 px-8 rounded-xl font-bold text-gray-300 transition-all text-lg" }, "닫기")
+                        )
+                    )
+                )
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+    </script>
+</body>
+</html>
