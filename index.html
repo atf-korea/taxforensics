@@ -341,11 +341,15 @@
                  <div className="flex justify-center mt-16">
                     <div className="text-slate-400 text-lg animate-pulse">데이터 연결 확인 중...</div>
                  </div>
-              ) : (
+              ) : filteredMenuItems.length > 0 ? (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredMenuItems.map((item, index) => (
                     <MenuCard key={index} {...item} />
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-slate-800/20 rounded-2xl border border-dashed border-slate-700">
+                   <p className="text-slate-500 text-xl font-medium">검색 결과가 없습니다.</p>
                 </div>
               )}
             </main>
